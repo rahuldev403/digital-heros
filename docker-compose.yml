@@ -1,0 +1,46 @@
+# Local development database.
+#
+# Production targets Neon (serverless Postgres). We deliberately use the plain
+# `pg` driver against both, so the only thing that changes between local and
+# production is the DATABASE_URL — no code paths diverge.
+#
+#   docker compose up -d      start Postgres + Adminer
+#   docker compose down       stop (data is kept in the named volume)
+#   docker compose down -v    stop and DESTROY all local data
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: dh_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dh
+      POSTGRES_PASSWORD: dh_local_dev
+      POSTGRES_DB: digital_heroes
+      # Deterministic collation so ORDER BY matches Neon's behaviour.
+      POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=en-US"
+    ports:
+      # Host port 5433 avoids clashing with any Postgres already installed locally.
+      - "5433:5432"
+    volumes:
+      - dh_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dh -d digital_heroes"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Lightweight DB browser at http://localhost:8080
+  # Server: postgres · User: dh · Password: dh_local_dev · Database: digital_heroes
+  adminer:
+    image: adminer:5
+    container_name: dh_adminer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+volumes:
+  dh_pgdata:
