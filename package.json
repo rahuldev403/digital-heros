@@ -22,7 +22,8 @@
     "dev:session": "tsx --conditions=react-server scripts/dev-session.ts",
     "stripe:sync": "tsx --conditions=react-server scripts/stripe-sync.ts",
     "verify:checkout": "tsx --conditions=react-server scripts/verify-checkout.ts",
-    "verify:uploads": "tsx scripts/verify-uploads.ts"
+    "verify:uploads": "tsx scripts/verify-uploads.ts",
+    "stripe:listen": "tsx scripts/stripe-listen.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

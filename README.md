@@ -31,6 +31,34 @@ npm run dev
 
 Open <http://localhost:3000>.
 
+### Payments (Stripe test mode)
+
+```bash
+# One-off: create the Stripe products and prices for the seeded plans
+npm run stripe:sync
+
+# In a second terminal, forward webhooks to the dev server
+npm run stripe:listen
+```
+
+Copy the `whsec_…` value that `stripe:listen` prints into `STRIPE_WEBHOOK_SECRET`
+in `.env.local`, then restart the dev server — Next.js reads env files at boot.
+
+`stripe listen` requires an explicit `--events` list. The npm script runs
+[`scripts/stripe-listen.ts`](scripts/stripe-listen.ts) rather than invoking the
+CLI directly, because on Windows npm runs scripts through `cmd.exe`, which
+treats commas as argument delimiters — a comma-separated list written straight
+into `package.json` arrives at the CLI as one space-joined nonsense event name.
+It fails silently: the listener starts, prints a signing secret, and forwards
+nothing. Spawning with an explicit argument array avoids shell parsing
+entirely.
+
+Checkout itself works *without* the webhook secret, because the return page
+reconciles the session directly. The secret is what keeps **renewals,
+cancellations and failed payments** in sync afterwards.
+
+Test card: `4242 4242 4242 4242`, any future expiry, any CVC.
+
 ### Demo credentials
 
 Created by `npm run db:seed`. Configurable via `SEED_*` variables in `.env.local`.
@@ -62,6 +90,7 @@ Created by `npm run db:seed`. Configurable via `SEED_*` variables in `.env.local
 | `npm run demo:draw` | Run and publish a draw for a past period (additive, non-destructive) |
 | `npm run dev:session` | Mint a session cookie for a seeded account (local DB only) |
 | `npm run stripe:sync` | Create/update Stripe products and prices from the plans table |
+| `npm run stripe:listen` | Forward Stripe webhooks to the local dev server |
 | `npm run verify:checkout` | Create real Checkout sessions and assert price, currency and metadata |
 | `npm run verify:uploads` | Assert upload validation rejects disguised and oversized files |
 
