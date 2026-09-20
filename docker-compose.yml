@@ -20,8 +20,10 @@ services:
       # Deterministic collation so ORDER BY matches Neon's behaviour.
       POSTGRES_INITDB_ARGS: "--locale-provider=icu --icu-locale=en-US"
     ports:
-      # Host port 5433 avoids clashing with any Postgres already installed locally.
-      - "5433:5432"
+      # Host port 5434: this machine already runs a native Postgres service on
+      # 5432/5433, and the first listener wins, so those ports silently connect
+      # you to the wrong server.
+      - "5434:5432"
     volumes:
       - dh_pgdata:/var/lib/postgresql/data
     healthcheck:
