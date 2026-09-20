@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { users } from "./auth";
+import { uploads } from "./uploads";
 import {
   drawModeEnum,
   drawStatusEnum,
@@ -217,8 +218,17 @@ export const winnerVerifications = pgTable(
       .notNull()
       .references(() => drawWinners.id, { onDelete: "cascade" }),
 
-    /** Screenshot of scores from the golf platform (PRD §09 PROOF UPLOAD). */
-    fileUrl: text("file_url").notNull(),
+    /**
+     * The stored proof screenshot (PRD §09 PROOF UPLOAD).
+     * Files are held in the `uploads` table and served through an
+     * access-controlled route, so there is no public URL to record.
+     */
+    uploadId: uuid("upload_id").references(() => uploads.id, {
+      onDelete: "set null",
+    }),
+
+    /** Retained for proofs referenced by an external link instead of a file. */
+    fileUrl: text("file_url"),
     fileName: text("file_name"),
     mimeType: text("mime_type"),
     fileSizeBytes: integer("file_size_bytes"),

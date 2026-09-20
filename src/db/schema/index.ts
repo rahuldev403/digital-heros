@@ -13,5 +13,6 @@ export * from "./charity";
 export * from "./billing";
 export * from "./scores";
 export * from "./draws";
+export * from "./uploads";
 export * from "./settings";
 export * from "./relations";
