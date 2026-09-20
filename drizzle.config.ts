@@ -1,9 +1,8 @@
-import { config as loadEnv } from "dotenv";
-import { defineConfig } from "drizzle-kit";
+// Must come first: drizzle-kit runs outside Next.js and does not get its
+// automatic .env.local loading.
+import "./src/lib/load-env";
 
-// drizzle-kit runs outside Next.js, so it does not get Next's automatic
-// .env.local loading. Load it explicitly, with .env as a fallback.
-loadEnv({ path: [".env.local", ".env"], quiet: true });
+import { defineConfig } from "drizzle-kit";
 
 /**
  * drizzle-kit configuration.

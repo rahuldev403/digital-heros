@@ -1,6 +1,5 @@
-import { config as loadEnv } from "dotenv";
-
-loadEnv({ path: [".env.local", ".env"], quiet: true });
+// Must come first: it populates process.env before @/lib/env parses it.
+import "@/lib/load-env";
 
 import { sql } from "drizzle-orm";
 
@@ -24,7 +23,7 @@ import {
   SCORES_RETAINED,
   TIER_SHARE_BPS,
 } from "@/lib/constants";
-import { splitSubscriptionPayment } from "@/lib/money";
+import { formatMoney, splitSubscriptionPayment } from "@/lib/money";
 import { hashPassword } from "@/lib/password";
 import { currentPeriodKey, shiftPeriodKey } from "@/lib/period";
 
@@ -42,7 +41,7 @@ import { currentPeriodKey, shiftPeriodKey } from "@/lib/period";
  * Run with `npm run db:seed`. Destructive: it truncates every table first.
  */
 
-const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "INR";
+const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "EUR";
 
 // ---------------------------------------------------------------------------
 // Deterministic RNG (mulberry32)
@@ -81,7 +80,7 @@ const CHARITY_SEED = [
     summary:
       "Funds coaching, equipment and range time for children who would never otherwise set foot on a course.",
     description:
-      "Greenfield Youth Trust runs after-school programmes across twelve municipal schools. Every rupee raised covers coaching hours, second-hand equipment refurbishment, and transport to partner courses. In the last year the Trust put 1,400 children through a first golf session, and 210 of them stayed on into structured coaching. Funding from Digital Heroes subscribers pays for the part nobody else will: the transport.",
+      "Greenfield Youth Trust runs after-school programmes across twelve municipal schools. Every contribution covers coaching hours, second-hand equipment refurbishment, and transport to partner courses. In the last year the Trust put 1,400 children through a first golf session, and 210 of them stayed on into structured coaching. Funding from Digital Heroes subscribers pays for the part nobody else will: the transport.",
     isFeatured: true,
   },
   {
@@ -259,7 +258,7 @@ async function main() {
         code: "monthly",
         name: "Monthly",
         description: "Full access, billed every month. Cancel any time.",
-        priceMinor: 49_900, // ₹499.00
+        priceMinor: 999, // €9.99
         currency: CURRENCY,
         interval: "month",
         prizePoolShareBps: DEFAULT_PRIZE_POOL_SHARE_BPS,
@@ -270,7 +269,7 @@ async function main() {
         name: "Yearly",
         // Two months free versus monthly — the discount the PRD asks for (§04).
         description: "Full access for a year. Two months free compared to monthly.",
-        priceMinor: 499_000, // ₹4,990.00
+        priceMinor: 9_990, // €99.90 — ten months' price for twelve months' access
         currency: CURRENCY,
         interval: "year",
         prizePoolShareBps: DEFAULT_PRIZE_POOL_SHARE_BPS,
@@ -541,18 +540,20 @@ async function main() {
 
   const charityTotal = paymentValues.reduce((sum, p) => sum + p.charityAmountMinor, 0);
 
+  const money = (minor: number) => formatMoney(minor, CURRENCY);
+
   console.log(`
 Seed complete.
 
   Charities            ${charityRows.length}
-  Plans                2 (monthly ₹499, yearly ₹4,990)
+  Plans                2 (monthly ${money(monthlyPlan.priceMinor)}, yearly ${money(yearlyPlan.priceMinor)})
   Users                ${userRows.length} (1 admin, ${playerUsers.length} players)
   Subscriptions        ${subscriptionValues.length}
   Payments             ${paymentValues.length}
   Scores               ${scoreValues.length}
 
-  Prize pool (${thisPeriod})  ₹${(poolThisPeriod / 100).toLocaleString("en-IN")}
-  Charity raised (all)  ₹${(charityTotal / 100).toLocaleString("en-IN")}
+  Prize pool (${thisPeriod})   ${money(poolThisPeriod)}
+  Charity raised (all)  ${money(charityTotal)}
 
 Sign in with:
   Admin   ${adminEmail} / ${adminPassword}

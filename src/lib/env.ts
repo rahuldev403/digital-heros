@@ -26,7 +26,7 @@ const serverEnvSchema = z.object({
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 
   /** ISO 4217 code. All stored amounts are in this currency's minor unit. */
-  NEXT_PUBLIC_CURRENCY: z.string().length(3).default("INR"),
+  NEXT_PUBLIC_CURRENCY: z.string().length(3).default("EUR"),
 
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });

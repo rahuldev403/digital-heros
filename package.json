@@ -8,7 +8,6 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",
@@ -16,7 +15,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts",
-    "db:setup": "npm run db:migrate && npm run db:seed"
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "stripe:doctor": "tsx scripts/stripe-doctor.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -29,6 +29,7 @@
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
     "stripe": "^22.6.2",
     "tailwind-merge": "^3.7.0",
     "zod": "^4.6.5"

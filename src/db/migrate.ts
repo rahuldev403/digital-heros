@@ -1,6 +1,5 @@
-import { config as loadEnv } from "dotenv";
-
-loadEnv({ path: [".env.local", ".env"], quiet: true });
+// Must come first: it populates process.env before anything reads it.
+import "@/lib/load-env";
 
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";

@@ -57,6 +57,7 @@ Created by `npm run db:seed`. Configurable via `SEED_*` variables in `.env.local
 | `npm run db:seed` | Truncate and reload demo data |
 | `npm run db:setup` | `db:migrate` + `db:seed` |
 | `npm run db:studio` | Drizzle Studio, a browser DB client |
+| `npm run stripe:doctor` | Report the connected Stripe account's country, currency and products |
 
 A web DB browser is also available at <http://localhost:8080> while the container runs
 (server `postgres`, user `dh`, password `dh_local_dev`, database `digital_heroes`).

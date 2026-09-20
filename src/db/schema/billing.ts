@@ -22,7 +22,7 @@ import {
  * MONEY REPRESENTATION
  *
  * Every amount in this schema is an integer in the currency's *minor unit*
- * (paise for INR, cents for USD), never a float or decimal. Percentage splits
+ * (cents for EUR), never a float or decimal. Percentage splits
  * are stored in basis points (1 bps = 0.01%). This keeps the charity split,
  * prize-pool contribution and tier distribution exact — a repeating fraction
  * like a third of a pool can never silently lose or invent a paisa. Rounding

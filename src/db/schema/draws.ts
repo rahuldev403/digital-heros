@@ -71,7 +71,7 @@ export const draws = pgTable(
 
     /**
      * Any minor units left over after splitting tiers among winners. Tracked
-     * explicitly so the books balance to the paisa instead of leaking rounding.
+     * explicitly so the books balance to the cent instead of leaking rounding.
      */
     undistributedMinor: integer("undistributed_minor").notNull().default(0),
 

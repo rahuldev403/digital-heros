@@ -3,7 +3,7 @@ import { CHARITY_MAX_PERCENT, CHARITY_MIN_PERCENT } from "./constants";
 /**
  * Money arithmetic.
  *
- * Every amount is an integer in the currency's minor unit (paise, cents). There
+ * Every amount is an integer in the currency's minor unit (cents). There
  * are no floats anywhere in this file, and no function returns a fraction. Each
  * division states explicitly where its remainder goes, because in a platform
  * that splits subscription fees three ways and then splits prize tiers among an
@@ -34,7 +34,7 @@ export function applyPercent(amountMinor: number, percent: number): number {
  * Returns the per-share amount and whatever could not be divided evenly. The
  * remainder is deliberately *not* folded into one lucky share: prizes must be
  * "split equally among multiple winners in the same tier" (PRD §07), so three
- * winners of a ₹1,000.01 pool each get ₹333.33 and the stray paisa is carried
+ * winners of a €1,000.01 pool each get €333.33 and the stray cent is carried
  * on the draw as `undistributedMinor` rather than making one winner richer.
  */
 export function divideEvenly(
@@ -128,18 +128,29 @@ export function toMinorUnits(amountMajor: number): number {
 }
 
 /**
- * Formats an amount for display, e.g. 49900 → "₹499.00".
+ * Locale used to render each supported currency.
  *
- * Locale is fixed per currency rather than taken from the browser, so a figure
- * shown to a user matches the figure shown to an admin reviewing the same
- * payout.
+ * Pinned per currency rather than taken from the browser: a prize figure shown
+ * to a winner must read identically to the one an admin sees while approving
+ * that payout. A viewer's locale changing the digit grouping of a number two
+ * people are discussing is a support problem, not a feature.
+ */
+const LOCALE_BY_CURRENCY: Record<string, string> = {
+  EUR: "en-IE", // "€9.99" rather than de-DE's "9,99 €"
+  GBP: "en-GB",
+  USD: "en-US",
+  INR: "en-IN", // lakh/crore digit grouping
+};
+
+/**
+ * Formats an amount for display, e.g. 999 → "€9.99".
  */
 export function formatMoney(
   amountMinor: number,
   currency: string,
   options: { compact?: boolean; hideDecimals?: boolean } = {},
 ): string {
-  const locale = currency === "INR" ? "en-IN" : "en-US";
+  const locale = LOCALE_BY_CURRENCY[currency.toUpperCase()] ?? "en-IE";
 
   return new Intl.NumberFormat(locale, {
     style: "currency",
