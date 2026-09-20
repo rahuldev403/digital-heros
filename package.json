@@ -18,7 +18,10 @@
     "db:setup": "npm run db:migrate && npm run db:seed",
     "stripe:doctor": "tsx scripts/stripe-doctor.ts",
     "verify:draw": "tsx scripts/verify-draw-engine.ts",
-    "demo:draw": "tsx --conditions=react-server scripts/run-demo-draw.ts"
+    "demo:draw": "tsx --conditions=react-server scripts/run-demo-draw.ts",
+    "dev:session": "tsx --conditions=react-server scripts/dev-session.ts",
+    "stripe:sync": "tsx --conditions=react-server scripts/stripe-sync.ts",
+    "verify:checkout": "tsx --conditions=react-server scripts/verify-checkout.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

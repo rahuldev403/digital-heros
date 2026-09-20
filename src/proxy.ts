@@ -22,7 +22,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/constants";
  */
 
 /** Route prefixes that require a session. */
-const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/scores", "/account"];
+const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/subscribe", "/account"];
 
 /** Routes a signed-in user should be bounced away from. */
 const GUEST_ONLY_PATHS = ["/login", "/signup"];
@@ -52,8 +52,14 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   /**
-   * Skip Next.js internals and static assets. Without this the proxy would run
-   * for every image and font request as well as every page.
+   * Skip Next.js internals, static assets and API routes.
+   *
+   * `/api` is excluded deliberately: the Stripe webhook authenticates by
+   * signature, not by cookie, and must never be redirected — a redirect would
+   * be read by Stripe as a delivery failure and trigger retries of an event
+   * that was never actually processed.
    */
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

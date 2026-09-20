@@ -60,6 +60,9 @@ Created by `npm run db:seed`. Configurable via `SEED_*` variables in `.env.local
 | `npm run stripe:doctor` | Report the connected Stripe account's country, currency and products |
 | `npm run verify:draw` | Run the draw-engine property checks |
 | `npm run demo:draw` | Run and publish a draw for a past period (additive, non-destructive) |
+| `npm run dev:session` | Mint a session cookie for a seeded account (local DB only) |
+| `npm run stripe:sync` | Create/update Stripe products and prices from the plans table |
+| `npm run verify:checkout` | Create real Checkout sessions and assert price, currency and metadata |
 
 A web DB browser is also available at <http://localhost:8080> while the container runs
 (server `postgres`, user `dh`, password `dh_local_dev`, database `digital_heroes`).
@@ -112,7 +115,7 @@ changes against a live database can be read before they run.
 
 - [x] **Phase 0** — Scaffold, Docker Postgres, schema, migrations, seed
 - [x] **Phase 1** — Auth, roles, route guards, retro design system
-- [ ] **Phase 2** — Stripe subscriptions and lifecycle
+- [x] **Phase 2** — Stripe subscriptions, Checkout, webhooks, lifecycle
 - [x] **Phase 3** — Charity directory, selection, contributions
 - [x] **Phase 4** — Score engine
 - [x] **Phase 5** — Draw and prize engine

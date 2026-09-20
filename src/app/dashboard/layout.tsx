@@ -1,9 +1,12 @@
-import Link from "next/link";
-
+import { SectionTabs } from "@/components/section-tabs";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 
 /**
  * Dashboard shell.
+ *
+ * One sticky bar only — the site header. Section navigation sits inline at the
+ * top of the content column as pills, so the page does not present two stacked
+ * navigation bars.
  *
  * Note that this layout does NOT perform the auth check. Layouts do not
  * re-render on navigation between the routes they wrap, and do not control
@@ -13,9 +16,9 @@ import { SiteFooter, SiteHeader } from "@/components/site-header";
 
 const TABS = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/scores", label: "Scores" },
-  { href: "/dashboard/draws", label: "Draws" },
-  { href: "/dashboard/charity", label: "Charity" },
+  { href: "/dashboard/scores", label: "My scores" },
+  { href: "/dashboard/draws", label: "My draws" },
+  { href: "/dashboard/charity", label: "My charity" },
 ];
 
 export default function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
@@ -23,24 +26,10 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
     <>
       <SiteHeader />
 
-      <div className="flex-1">
-        <nav className="border-b-2 border-ink bg-cream-deep">
-          <ul className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-5">
-            {TABS.map((tab) => (
-              <li key={tab.href}>
-                <Link
-                  href={tab.href}
-                  className="inline-block whitespace-nowrap border-b-4 border-transparent px-4 py-3 text-sm font-bold uppercase tracking-widest text-ink-soft transition-colors hover:border-orange hover:text-ink"
-                >
-                  {tab.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <main className="mx-auto w-full max-w-5xl px-5 py-10">{children}</main>
-      </div>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8">
+        <SectionTabs tabs={TABS} />
+        <div className="mt-8">{children}</div>
+      </main>
 
       <SiteFooter />
     </>

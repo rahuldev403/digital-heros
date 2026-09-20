@@ -117,16 +117,16 @@ export default async function UserDrawsPage() {
                         {entry.payoutStatus === "paid" ? "Paid" : "Pending"}
                       </span>
 
+                      {/*
+                        Proof upload is not built yet, so no link is rendered
+                        here — a button leading to a 404 is worse than no
+                        button. The admin side of verification is complete; only
+                        the claimant's upload is outstanding.
+                      */}
                       {entry.verificationStatus !== "approved" && (
-                        <Button
-                          as={Link}
-                          href={`/dashboard/draws/${entry.periodKey}/claim`}
-                          size="sm"
-                        >
-                          {entry.verificationStatus === "rejected"
-                            ? "Submit again"
-                            : "Upload proof"}
-                        </Button>
+                        <span className="text-sm text-ink-faint">
+                          Proof upload opens shortly — we will be in touch.
+                        </span>
                       )}
                     </div>
                   )}

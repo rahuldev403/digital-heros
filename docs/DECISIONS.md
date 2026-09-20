@@ -284,3 +284,64 @@ figure with their own query.
 subscribe has to be the number the draw will actually pay out. Two independent
 implementations of the same business rule will drift, and the one on the
 marketing page is the one people will screenshot.
+
+---
+
+## D12 · Checkout reconciles on return AND on webhook
+
+**PRD §04 LIFECYCLE — "handles renewal, cancellation, and lapsed-subscription
+states."**
+
+**Decision.** The Checkout return page reconciles the session server-side before
+rendering, and the webhook handles everything afterwards. Both call the same
+`syncSubscriptionFromStripe`.
+
+**Why both.** Relying on the webhook alone means the user lands back from
+Stripe on a page that still says "no subscription" until the event arrives —
+seconds, on a cold serverless function. That looks broken, and a user who
+believes their payment failed may pay twice. Reconciling on return makes the
+first payment instant.
+
+Relying on the return alone is worse: it only ever fires once, so renewals,
+failed payments, and cancellations made in Stripe's own portal would never
+reach us.
+
+**Why one shared function.** Two code paths writing the same rows would drift,
+and the one that ran less often would be the buggy one. Both are idempotent —
+the upsert targets the unique index on `stripe_subscription_id`, and the ledger
+insert targets the unique index on `stripe_invoice_id`, so a webhook redelivery
+cannot double-count money into the prize pool.
+
+**Webhook safety.** Signatures are verified against the raw request body before
+anything is acted on; an unverified payload is an unauthenticated request
+claiming to be Stripe. `/api` is excluded from the proxy matcher, because a
+redirect would read to Stripe as a delivery failure and trigger retries of an
+event that was never processed. A handler that throws returns 500 deliberately,
+so Stripe retries — losing a renewal silently is far worse than processing one
+twice.
+
+---
+
+## D13 · Navigation: one bar, unambiguous labels
+
+**Found by using the app, not by reading the code.**
+
+The dashboard rendered the site header and a section tab bar as two stacked
+full-width bars. Beyond looking like two headers, the labels collided: the site
+header's "Draws" links to public results while the tab's "Draws" linked to the
+player's own history — the same word pointing at two different pages. "Charities"
+and "Charity" had the same problem.
+
+**Decision.** One sticky bar. Section navigation is inline pills inside the
+content column, and the player's own sections are possessive: "My scores", "My
+draws", "My charity".
+
+Separately, `/pricing` existed and worked but was reachable only from the
+footer, and no header link indicated the current page. Pricing is now in the
+primary nav, and both navs mark the active route with `aria-current="page"` —
+which also fixes the accessibility gap, since previously nothing announced where
+you were.
+
+**Rule taken from this.** A route that exists but is not linked does not exist
+to a user. Link coverage is now checked against the route list rather than
+assumed.
