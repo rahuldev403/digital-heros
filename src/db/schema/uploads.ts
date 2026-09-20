@@ -1,4 +1,13 @@
-import { customType, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  customType,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { users } from "./auth";
 
@@ -48,6 +57,16 @@ export const uploads = pgTable(
     /** Original name, for the download filename only. Never used as a path. */
     fileName: text("file_name"),
     sizeBytes: integer("size_bytes").notNull(),
+
+    /**
+     * Whether anyone may fetch this file.
+     *
+     * Defaults to false, so a file is private unless something deliberately
+     * publishes it. Charity logos and cover images are public; winner proof
+     * screenshots never are, and getting that backwards would expose a named
+     * person's scorecard.
+     */
+    isPublic: boolean("is_public").notNull().default(false),
 
     uploadedBy: uuid("uploaded_by").references(() => users.id, {
       onDelete: "set null",

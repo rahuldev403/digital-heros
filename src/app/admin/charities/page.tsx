@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { asc, sql } from "drizzle-orm";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Plus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { db } from "@/db";
 import { charities, charityEvents, payments, users } from "@/db/schema";
@@ -48,11 +49,17 @@ export default async function AdminCharitiesPage() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-4xl sm:text-5xl">Charities</h1>
-        <p className="text-ink-soft">
-          {rows.length} listed · {formatMoney(totalRaised, "EUR")} raised in total
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-4xl sm:text-5xl">Charities</h1>
+          <p className="text-ink-soft">
+            {rows.length} listed · {formatMoney(totalRaised, "EUR")} raised in total
+          </p>
+        </div>
+        <Button as={Link} href="/admin/charities/new" size="lg">
+          <Plus className="size-4" aria-hidden />
+          New charity
+        </Button>
       </header>
 
       <div className="card-retro overflow-x-auto">
@@ -84,10 +91,16 @@ export default async function AdminCharitiesPage() {
               <tr key={row.id}>
                 <td className="px-4 py-3">
                   <Link
-                    href={`/charities/${row.slug}`}
-                    className="inline-flex items-center gap-1.5 font-semibold hover:text-teal"
+                    href={`/admin/charities/${row.id}`}
+                    className="font-semibold hover:text-teal"
                   >
                     {row.name}
+                  </Link>
+                  <Link
+                    href={`/charities/${row.slug}`}
+                    className="ml-2 inline-flex items-center text-ink-faint hover:text-teal"
+                    aria-label={`View public profile for ${row.name}`}
+                  >
                     <ExternalLink className="size-3.5" aria-hidden />
                   </Link>
                 </td>
@@ -118,11 +131,6 @@ export default async function AdminCharitiesPage() {
         </table>
       </div>
 
-      <p className="rounded-xl border-2 border-dashed border-ink-faint px-4 py-3 text-sm text-ink-soft">
-        Charity content is currently seeded. Create and edit forms land with the
-        content-management pass; the listing above already reflects live ledger
-        totals.
-      </p>
     </div>
   );
 }

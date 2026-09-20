@@ -23,12 +23,6 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    return new NextResponse("Not found", { status: 404 });
-  }
-
   const { id } = await params;
 
   // A malformed id would otherwise reach Postgres and raise a type error.
@@ -42,6 +36,7 @@ export async function GET(
       mimeType: uploads.mimeType,
       fileName: uploads.fileName,
       sizeBytes: uploads.sizeBytes,
+      isPublic: uploads.isPublic,
       uploadedBy: uploads.uploadedBy,
       claimantId: drawWinners.userId,
     })
@@ -55,13 +50,23 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const isOwner = file.uploadedBy === user.id || file.claimantId === user.id;
-  const isAdmin = user.role === "admin";
+  // Public files — charity logos and cover images — are served to anyone. The
+  // flag defaults to false, so a file is private unless something deliberately
+  // published it; proof screenshots can never reach this branch by accident.
+  if (!file.isPublic) {
+    const user = await getCurrentUser();
 
-  if (!isOwner && !isAdmin) {
-    // 404 rather than 403: confirming that a given id exists would leak that
-    // someone else made a claim.
-    return new NextResponse("Not found", { status: 404 });
+    if (!user) {
+      return new NextResponse("Not found", { status: 404 });
+    }
+
+    const isOwner = file.uploadedBy === user.id || file.claimantId === user.id;
+
+    if (!isOwner && user.role !== "admin") {
+      // 404 rather than 403: confirming that a given id exists would leak that
+      // someone else made a claim.
+      return new NextResponse("Not found", { status: 404 });
+    }
   }
 
   return new NextResponse(new Uint8Array(file.data), {
@@ -76,8 +81,11 @@ export async function GET(
       "X-Content-Type-Options": "nosniff",
       // Blocks any embedded content from running if the type were ever wrong.
       "Content-Security-Policy": "default-src 'none'; img-src 'self'; sandbox",
-      // Private to this user — never cached by a shared proxy.
-      "Cache-Control": "private, max-age=3600",
+      // A private file must never be cached by a shared proxy; a public one
+      // may be, and charity logos are requested on every directory render.
+      "Cache-Control": file.isPublic
+        ? "public, max-age=86400, immutable"
+        : "private, max-age=3600",
     },
   });
 }
