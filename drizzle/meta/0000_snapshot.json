@@ -1,5 +1,5 @@
 {
-  "id": "3e2738d1-a77c-4b10-bfbe-29772d26f455",
+  "id": "d4627aee-22dd-46f9-b09b-2452d81214dc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -240,7 +240,7 @@
       "checkConstraints": {
         "users_charity_percent_range": {
           "name": "users_charity_percent_range",
-          "value": "\"users\".\"charity_percent\" >= 10 AND \"users\".\"charity_percent\" <= 100"
+          "value": "\"users\".\"charity_percent\" >= 10 AND \"users\".\"charity_percent\" <= 70"
         }
       },
       "isRLSEnabled": false

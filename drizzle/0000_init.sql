@@ -28,7 +28,7 @@ CREATE TABLE "users" (
 	"charity_percent" integer DEFAULT 10 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "users_charity_percent_range" CHECK ("users"."charity_percent" >= 10 AND "users"."charity_percent" <= 100)
+	CONSTRAINT "users_charity_percent_range" CHECK ("users"."charity_percent" >= 10 AND "users"."charity_percent" <= 70)
 );
 --> statement-breakpoint
 CREATE TABLE "charities" (
