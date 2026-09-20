@@ -74,8 +74,16 @@ export const ROLLOVER_TIERS: PrizeTier[] = [5];
 /** Minimum share of a subscription fee that must go to the chosen charity. */
 export const CHARITY_MIN_PERCENT = 10;
 
-/** Users may voluntarily raise their contribution, up to the whole fee. */
-export const CHARITY_MAX_PERCENT = 100;
+/**
+ * Ceiling on the voluntary increase (PRD §08.1: "users may voluntarily increase
+ * their charity percentage" — without saying how far).
+ *
+ * It is 100% minus the prize-pool share below, i.e. a user may give away the
+ * entire platform margin but cannot eat into the prize pool. Letting one
+ * generous user shrink the pool would quietly reduce everyone else's winnings,
+ * which is the wrong trade to allow silently.
+ */
+export const CHARITY_MAX_PERCENT = 70;
 
 // ---------------------------------------------------------------------------
 // Prize pool funding (PRD §07)
