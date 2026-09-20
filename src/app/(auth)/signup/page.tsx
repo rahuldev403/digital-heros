@@ -40,9 +40,9 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
       <header className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">
           Start playing for
-          <span className="font-display italic text-mint"> something.</span>
+          <span className="text-orange"> something.</span>
         </h1>
-        <p className="text-muted">
+        <p className="text-ink-soft">
           Log your rounds, enter every monthly draw, and send part of your
           subscription to a cause you care about.
         </p>
@@ -50,11 +50,11 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
 
       <SignupForm charities={charityOptions} next={next} />
 
-      <p className="text-sm text-muted">
+      <p className="text-sm text-ink-soft">
         Already have an account?{" "}
         <Link
           href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
-          className="font-medium text-mint underline-offset-4 hover:underline"
+          className="font-medium text-teal underline-offset-4 hover:underline"
         >
           Sign in
         </Link>

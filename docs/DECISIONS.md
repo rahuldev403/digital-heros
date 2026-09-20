@@ -164,3 +164,123 @@ needs a population with score histories and several months of payments so the
 prize pool has real money in it. The placeholder prefix makes it obvious at a
 glance which rows never existed in Stripe, so nobody tries to reconcile them
 against a Stripe dashboard.
+
+---
+
+## D8 · Retro screen-print visual language
+
+**PRD §12 — a constraint stated as a negative.** The brief says what the design
+must *not* be ("must not resemble a traditional golf website"; avoid "fairways,
+plaid, club imagery as primary design language") and asks for "clean, modern,
+motion-enhanced" and "emotion-driven — leading with charitable impact, not
+sport." It does not say what it should look like.
+
+**Decision.** A 1970s screen-printed sports-poster aesthetic: warm paper stock,
+a fixed palette of five saturated flat inks, heavy display type, hard offset
+shadows, print grain, and no gradients pretending to be light.
+
+**Why.** The ban is on golf's *house style* — mahogany, manicured turf
+photography, crest-and-serif formality — not on colour. A screen-print palette
+reads as optimistic, human and charitable, which is what "emotion-driven,
+leading with charitable impact" asks for, and it looks nothing like any existing
+golf website. It also gives the numbers somewhere to live: draw numbers rendered
+as flat-ink balls in a retro monospace are legible at a glance and unmistakably
+lottery, which no amount of tasteful minimalism achieves.
+
+**How "professional" is kept.** Discipline, not restraint of colour: one shadow
+treatment, one border weight, one type superfamily, a closed palette, and
+contrast ratios that pass AA (dark ink on every saturated fill, never white on
+orange).
+
+**Light-only, deliberately.** A screen print inverted to dark stops being a
+screen print. A half-built dark mode is worse than none, so `color-scheme` is
+pinned to light rather than shipping an unconsidered inversion.
+
+---
+
+## D9 · Authorization in the Data Access Layer, not in layouts or proxy
+
+**Next.js 16 architecture — a correctness trap.**
+
+**Decision.** Every authorization check lives in `src/lib/dal.ts`. `proxy.ts`
+(Next 16's rename of `middleware.ts`) performs only an optimistic check for the
+*presence* of a session cookie, never its validity.
+
+**Why not layouts.** A layout does not re-render when navigating between routes
+that share it, and it does not control whether its child segments render —
+segments and parallel slots are rendered by the router regardless. A check in a
+layout is therefore both skippable and, on navigation, stale.
+
+**Why not proxy.** Proxy runs on every matched request including prefetches, and
+may be deployed to the CDN edge separately from the render path. A database
+lookup there multiplies load and cannot be relied upon. It exists here purely to
+save an unauthenticated visitor a wasted render.
+
+**The division of labour.** A forged cookie gets past `proxy.ts` and is then
+rejected by the DAL. That is the design, not a gap: the proxy is an
+optimisation, the DAL is the boundary. Because `getCurrentUser()` verifies the
+session as a side effect of returning a user, there is no way to read the
+current user and forget to check them.
+
+**Also rejected: `forbidden()`.** Next's `forbidden()` is still behind the
+experimental `authInterrupts` flag. Admin routes call `notFound()` instead —
+stable API, and it does not confirm to a curious subscriber that an admin
+surface exists at that URL.
+
+---
+
+## D10 · The two draw modes are a product lever, not a fairness question
+
+**PRD §06 — two options offered without guidance on when to use either.**
+"Random — standard lottery-style" and "Algorithmic — weighted by score
+frequency."
+
+**Finding.** With a 5-from-45 draw, the chance of any one entry matching three
+or more is about **0.64%**. On a small platform that means almost nobody ever
+wins: a run with 12 entries in random mode produced zero winners, which is the
+statistically expected outcome (≈0.08 expected winners), not a bug.
+
+Algorithmic mode changes this materially. Because a player's numbers are their
+Stableford scores, and club Stableford scores cluster in the high twenties to
+mid thirties, weighting the draw by score frequency concentrates the drawn
+numbers in exactly the band where entries live. The same 12 entries produced a
+winner, with drawn numbers 23, 26, 27, 31, 36 — visibly inside the scoring band.
+
+**Decision.** Mode is chosen per draw by an admin, and is recorded on the draw
+row rather than being a global setting.
+
+**Why.** The two modes are not "fair" and "unfair" — both are honest, both are
+seeded and reproducible. They are different products:
+
+- **Random** gives a genuine lottery: rare, large, jackpot-driven, and it will
+  roll over for months on a small member base.
+- **Algorithmic** spreads the pool across more, smaller wins, and keeps a young
+  platform feeling alive while the member base is still small.
+
+A platform would plausibly launch on algorithmic and move to random as it grows.
+Baking either into the code would have removed that choice, so the mode is data,
+selectable at simulation time and shown publicly on every published result.
+
+**Not hidden.** Each published draw states which logic produced it, alongside
+its seed, so the choice is disclosed rather than being an invisible thumb on the
+scale.
+
+---
+
+## D11 · One pool calculation, used everywhere
+
+**A bug found by cross-checking pages, not by a test.**
+
+The homepage and the results page each computed "this month's prize pool" and
+disagreed: the homepage summed the ledger for the period (€200.85) while the
+results page used the draw service, which also adds the unclaimed jackpot
+carried in (€221.25).
+
+**Decision.** `calculatePool()` in the draw service is the single source of
+truth, and the marketing statistics now call it rather than re-deriving the
+figure with their own query.
+
+**Why it mattered.** The number quoted on the page that persuades someone to
+subscribe has to be the number the draw will actually pay out. Two independent
+implementations of the same business rule will drift, and the one on the
+marketing page is the one people will screenshot.

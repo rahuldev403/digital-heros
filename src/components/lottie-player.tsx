@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
 import dynamic from "next/dynamic";
 
 import { cn } from "@/lib/utils";
@@ -9,29 +7,29 @@ import { cn } from "@/lib/utils";
 /**
  * Lottie player.
  *
- * Two deliberate loads, both deferred:
+ * Uses `LottieLight` rather than the full `Lottie`. The engine ships in three
+ * sizes and each drops features the animation does not use; our file
+ * (`golfer-cart.lottie.json`) is shape layers only — no expressions, no
+ * effects, no text, no bitmaps — so the smallest build renders it identically
+ * while shipping the least JavaScript.
  *
- *  1. The renderer (`lottie-react` wraps lottie-web, ~250 KB) is imported with
- *     `ssr: false` so it never enters the server bundle or the initial payload.
- *  2. The animation JSON (~128 KB) is fetched only once the element is near the
- *     viewport, via IntersectionObserver.
- *
- * Together that keeps a decorative animation off the critical path entirely —
- * the page is readable and interactive before either arrives. Until then a
- * reserved box holds the space, so nothing shifts when it does (no layout
- * shift, which is the usual cost of dropping a Lottie into a hero).
+ * Loaded through `next/dynamic` with `ssr: false` so neither the engine nor the
+ * animation enters the server render or the initial payload: a decorative
+ * animation should never be on the critical path. The wrapper reserves its
+ * aspect ratio up front, so nothing shifts when it does arrive — layout shift
+ * being the usual cost of dropping a Lottie into a hero.
  */
-
-const Lottie = dynamic(() => import("lottie-react"), {
-  ssr: false,
-});
+const LottieLight = dynamic(
+  () => import("lottie-react").then((mod) => mod.LottieLight),
+  { ssr: false },
+);
 
 interface LottiePlayerProps {
-  /** Path under /public, e.g. "/golfer-cart.lottie.json". */
+  /** Path under /public, or any URL. The library fetches it. */
   src: string;
   className?: string;
   loop?: boolean;
-  /** Intrinsic ratio, used to reserve space before the JSON loads. */
+  /** Intrinsic ratio of the source file, used to reserve space. */
   aspectRatio?: string;
 }
 
@@ -41,76 +39,15 @@ export function LottiePlayer({
   loop = true,
   aspectRatio = "692 / 538",
 }: LottiePlayerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [animationData, setAnimationData] = useState<unknown>(null);
-  const [shouldLoad, setShouldLoad] = useState(false);
-
-  // Start fetching slightly before the element scrolls into view, so the
-  // animation is ready by the time it is actually looked at.
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!element) return;
-
-    // Older browsers without IntersectionObserver simply load immediately.
-    if (typeof IntersectionObserver === "undefined") {
-      setShouldLoad(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShouldLoad(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!shouldLoad || animationData) return;
-
-    let cancelled = false;
-
-    fetch(src)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        // The component may have unmounted while the fetch was in flight.
-        if (!cancelled) setAnimationData(data);
-      })
-      .catch(() => {
-        // A decorative animation failing is not worth breaking the page for;
-        // the reserved box just stays empty.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [shouldLoad, src, animationData]);
-
   return (
     <div
-      ref={containerRef}
       className={cn("w-full", className)}
       style={{ aspectRatio }}
-      // Purely decorative: it repeats information the headline already gives,
-      // so screen readers should skip it rather than announce "animation".
+      // Decorative: it restates what the adjacent headline already says, so
+      // announcing it would only add noise for screen-reader users.
       aria-hidden="true"
     >
-      {animationData ? (
-        <Lottie
-          animationData={animationData}
-          loop={loop}
-          autoplay
-          className="size-full"
-          rendererSettings={{ preserveAspectRatio: "xMidYMid meet" }}
-        />
-      ) : null}
+      <LottieLight src={src} autoplay loop={loop} className="size-full" />
     </div>
   );
 }

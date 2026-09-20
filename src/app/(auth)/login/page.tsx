@@ -23,18 +23,18 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     <div className="space-y-8">
       <header className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Welcome back.</h1>
-        <p className="text-muted">
+        <p className="text-ink-soft">
           Sign in to log your scores and follow this month&apos;s draw.
         </p>
       </header>
 
       <LoginForm next={next} />
 
-      <p className="text-sm text-muted">
+      <p className="text-sm text-ink-soft">
         New here?{" "}
         <Link
           href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
-          className="font-medium text-mint underline-offset-4 hover:underline"
+          className="font-medium text-teal underline-offset-4 hover:underline"
         >
           Create an account
         </Link>

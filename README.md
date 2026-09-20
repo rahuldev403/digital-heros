@@ -58,6 +58,8 @@ Created by `npm run db:seed`. Configurable via `SEED_*` variables in `.env.local
 | `npm run db:setup` | `db:migrate` + `db:seed` |
 | `npm run db:studio` | Drizzle Studio, a browser DB client |
 | `npm run stripe:doctor` | Report the connected Stripe account's country, currency and products |
+| `npm run verify:draw` | Run the draw-engine property checks |
+| `npm run demo:draw` | Run and publish a draw for a past period (additive, non-destructive) |
 
 A web DB browser is also available at <http://localhost:8080> while the container runs
 (server `postgres`, user `dh`, password `dh_local_dev`, database `digital_heroes`).
@@ -109,13 +111,13 @@ changes against a live database can be read before they run.
 ## Progress
 
 - [x] **Phase 0** — Scaffold, Docker Postgres, schema, migrations, seed
-- [ ] **Phase 1** — Auth, roles, route guards
+- [x] **Phase 1** — Auth, roles, route guards, retro design system
 - [ ] **Phase 2** — Stripe subscriptions and lifecycle
-- [ ] **Phase 3** — Charity directory, selection, contributions
-- [ ] **Phase 4** — Score engine
-- [ ] **Phase 5** — Draw and prize engine
+- [x] **Phase 3** — Charity directory, selection, contributions
+- [x] **Phase 4** — Score engine
+- [x] **Phase 5** — Draw and prize engine
 - [ ] **Phase 6** — Winner verification and payouts
-- [ ] **Phase 7** — User dashboard
-- [ ] **Phase 8** — Admin dashboard
+- [x] **Phase 7** — User dashboard
+- [x] **Phase 8** — Admin dashboard (users, draws, charities, winners, reports)
 - [ ] **Phase 9** — Public site and UI polish
 - [ ] **Phase 10** — Deployment

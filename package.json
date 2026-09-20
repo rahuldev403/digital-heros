@@ -16,7 +16,9 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts",
     "db:setup": "npm run db:migrate && npm run db:seed",
-    "stripe:doctor": "tsx scripts/stripe-doctor.ts"
+    "stripe:doctor": "tsx scripts/stripe-doctor.ts",
+    "verify:draw": "tsx scripts/verify-draw-engine.ts",
+    "demo:draw": "tsx --conditions=react-server scripts/run-demo-draw.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

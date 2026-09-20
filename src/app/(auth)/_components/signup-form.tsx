@@ -83,7 +83,7 @@ export function SignupForm({
       <div className="space-y-2">
         <label htmlFor="charityId" className="block text-sm font-medium text-ink">
           Choose your cause
-          <span className="ml-1 text-ember" aria-hidden>
+          <span className="ml-1 text-orange" aria-hidden>
             *
           </span>
         </label>
@@ -96,10 +96,10 @@ export function SignupForm({
           aria-invalid={fieldErrors?.charityId ? true : undefined}
           className={cn(
             "w-full h-11 px-3.5 rounded-xl appearance-none",
-            "bg-surface border text-ink transition-colors duration-200",
-            "focus:outline-none focus:border-mint/60",
-            "focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-mint)_20%,transparent)]",
-            fieldErrors?.charityId ? "border-danger/60" : "border-line",
+            "bg-paper border-2 text-ink transition-[box-shadow,border-color] duration-150",
+            "focus:outline-none",
+            "focus:shadow-[inset_3px_3px_0_0_var(--color-teal)]",
+            fieldErrors?.charityId ? "border-danger" : "border-ink",
           )}
         >
           <option value="" disabled>
@@ -118,18 +118,18 @@ export function SignupForm({
       </div>
 
       {/* --- Contribution percentage --- */}
-      <div className="space-y-3 rounded-xl border border-line bg-surface/60 p-4">
+      <div className="space-y-3 rounded-xl border-2 border-ink bg-cream-deep p-4">
         <div className="flex items-baseline justify-between">
           <label
             htmlFor="charityPercent"
             className="flex items-center gap-2 text-sm font-medium text-ink"
           >
-            <Heart className="size-4 text-ember" aria-hidden />
+            <Heart className="size-4 text-orange" aria-hidden />
             Your contribution
           </label>
           <output
             htmlFor="charityPercent"
-            className="tabular text-2xl font-semibold text-mint"
+            className="tabular text-2xl font-semibold text-teal"
           >
             {percent}%
           </output>
@@ -144,10 +144,10 @@ export function SignupForm({
           step={5}
           value={percent}
           onChange={(event) => setPercent(Number(event.target.value))}
-          className="w-full accent-[var(--color-mint)]"
+          className="w-full accent-orange"
         />
 
-        <p className="text-sm text-faint">
+        <p className="text-sm text-ink-faint">
           {percent === CHARITY_MIN_PERCENT
             ? `${CHARITY_MIN_PERCENT}% is the minimum. Move the slider to give more.`
             : `Thank you — that is ${percent - CHARITY_MIN_PERCENT}% above the minimum.`}
@@ -164,7 +164,7 @@ export function SignupForm({
         {isPending ? "Creating your account…" : "Create account"}
       </Button>
 
-      <p className="text-center text-xs leading-relaxed text-faint">
+      <p className="text-center text-xs leading-relaxed text-ink-faint">
         You can change your cause or your percentage at any time.
       </p>
     </form>

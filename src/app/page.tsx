@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, HeartHandshake, PenLine, Trophy } from "lucide-react";
 
 import { LottiePlayer } from "@/components/lottie-player";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Marquee } from "@/components/marquee";
 import { Reveal } from "@/components/reveal";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <SiteHeader signedIn={Boolean(user)} />
+      <SiteHeader />
 
       <main className="flex-1">
         <Hero stats={stats} signedIn={Boolean(user)} />
@@ -52,40 +53,6 @@ export default async function HomePage() {
 
       <SiteFooter />
     </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-function SiteHeader({ signedIn }: { signedIn: boolean }) {
-  return (
-    <header className="sticky top-0 z-50 border-b-2 border-ink bg-cream/90 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
-        <Link href="/" className="font-display text-xl uppercase tracking-tight">
-          digital<span className="text-orange">.</span>heroes
-        </Link>
-
-        <nav className="flex items-center gap-2">
-          <Button as={Link} href="/charities" variant="ghost" size="sm">
-            Charities
-          </Button>
-          {signedIn ? (
-            <Button as={Link} href="/dashboard" size="sm">
-              Dashboard
-            </Button>
-          ) : (
-            <>
-              <Button as={Link} href="/login" variant="ghost" size="sm">
-                Sign in
-              </Button>
-              <Button as={Link} href="/signup" size="sm">
-                Join
-              </Button>
-            </>
-          )}
-        </nav>
-      </div>
-    </header>
   );
 }
 
@@ -305,6 +272,16 @@ function PrizeTiers({ stats }: { stats: Awaited<ReturnType<typeof getPlatformSta
             {TIER_SHARE_BPS[3] / 100}. Amounts shown are this month&apos;s pool
             split by those shares, before it is divided between winners in each
             tier.
+            {stats.rolloverInMinor > 0 && (
+              <>
+                {" "}
+                Includes{" "}
+                <strong className="font-mono tabular text-ink">
+                  {formatMoney(stats.rolloverInMinor, stats.currency)}
+                </strong>{" "}
+                carried over from an unclaimed jackpot.
+              </>
+            )}
           </p>
         </Reveal>
       </div>
@@ -415,18 +392,5 @@ function FinalCta({ signedIn }: { signedIn: boolean }) {
         </div>
       </div>
     </section>
-  );
-}
-
-function SiteFooter() {
-  return (
-    <footer className="border-t-2 border-ink bg-cream px-5 py-8">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-ink-faint">
-        <p className="font-display text-base uppercase text-ink">
-          digital<span className="text-orange">.</span>heroes
-        </p>
-        <p>A golf performance and charity draw platform.</p>
-      </div>
-    </footer>
   );
 }
