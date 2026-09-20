@@ -1,31 +1,38 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Archivo, Archivo_Black, Space_Mono } from "next/font/google";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 /**
- * Display face, used only for the italic phrase in headlines.
+ * Type system.
  *
- * The PRD's own document pairs a geometric sans with a high-contrast serif
- * italic; borrowing that pairing keeps the product recognisably part of the
- * same brand, and the serif does the emotional work that a golf photograph
- * would otherwise be asked to do (PRD §12 AVOID).
+ * One superfamily does the work: Archivo for everything readable, Archivo
+ * Black for poster headlines. Sharing a skeleton between body and display is
+ * what keeps a loud retro layout from tipping into novelty — the headlines are
+ * emphatic, not a different personality.
+ *
+ * Space Mono carries every number that matters: draw numbers, Stableford
+ * points, prize amounts. A retro monospace makes a lottery number look like a
+ * lottery number, and tabular figures keep columns aligned.
  */
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-display",
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const archivoBlack = Archivo_Black({
+  variable: "--font-archivo-black",
   subsets: ["latin"],
   weight: "400",
-  style: "italic",
+  display: "swap",
+});
+
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -41,9 +48,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${archivo.variable} ${archivoBlack.variable} ${spaceMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-canvas text-ink">{children}</body>
+      <body className="grain min-h-full flex flex-col bg-cream text-ink">
+        {children}
+      </body>
     </html>
   );
 }

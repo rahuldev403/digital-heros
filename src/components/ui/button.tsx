@@ -7,22 +7,26 @@ import { cn } from "@/lib/utils";
 /**
  * Button.
  *
- * Renders a `<button>` by default, or any element via `as` — a link that looks
- * like a button should still be an `<a>`, so it opens in a new tab on
- * middle-click and is announced correctly by screen readers.
+ * The retro treatment is a thick ink keyline plus a hard offset shadow. On
+ * press the button translates into its own shadow, so the click reads as a
+ * physical stamp rather than a colour change — that one interaction carries
+ * most of the "motion-enhanced, micro-interaction" requirement (PRD §12)
+ * without any JavaScript.
+ *
+ * Renders as `<button>` by default, or any element via `as` — a link that looks
+ * like a button must still be an `<a>` so it middle-clicks, right-clicks and
+ * announces correctly.
  */
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "dark" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    "bg-mint text-mint-ink hover:bg-mint-bright active:bg-mint " +
-    "shadow-[0_1px_0_0_rgba(255,255,255,0.12)_inset]",
-  secondary:
-    "bg-elevated text-ink border border-line-strong hover:border-mint/50 hover:bg-line",
-  ghost: "text-muted hover:text-ink hover:bg-elevated",
-  danger: "bg-danger/15 text-danger border border-danger/30 hover:bg-danger/25",
+  primary: "bg-orange text-cream border-ink hover:bg-orange-deep",
+  secondary: "bg-paper text-ink border-ink hover:bg-mustard",
+  dark: "bg-ink text-cream border-ink hover:bg-forest",
+  ghost: "bg-transparent text-ink border-transparent shadow-none hover:bg-cream-deep",
+  danger: "bg-danger text-cream border-ink hover:brightness-110",
 };
 
 const SIZES: Record<Size, string> = {
@@ -34,7 +38,6 @@ const SIZES: Record<Size, string> = {
 interface ButtonOwnProps {
   variant?: Variant;
   size?: Size;
-  /** Shows a spinner and blocks interaction. */
   loading?: boolean;
   fullWidth?: boolean;
   children?: ReactNode;
@@ -55,22 +58,23 @@ export function Button<T extends ElementType = "button">({
   ...props
 }: ButtonProps<T>) {
   const Component = (as ?? "button") as ElementType;
+  const isGhost = variant === "ghost";
 
   return (
     <Component
       className={cn(
-        "inline-flex items-center justify-center font-medium",
-        "transition-[background-color,border-color,color,transform] duration-200",
-        "active:scale-[0.98]",
-        "disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center border-2 font-semibold uppercase tracking-wide",
+        "transition-[transform,box-shadow,background-color] duration-150",
+        // Press into the shadow.
+        !isGhost && "shadow-retro-sm hover:-translate-y-0.5 hover:shadow-retro",
+        !isGhost && "active:translate-x-0.5 active:translate-y-0.5 active:shadow-none",
+        "disabled:pointer-events-none disabled:opacity-55",
         VARIANTS[variant],
         SIZES[size],
         fullWidth && "w-full",
         className,
       )}
-      // Only a real <button> understands `disabled`.
       {...(Component === "button" ? { disabled: loading || props.disabled } : {})}
-      // Tells assistive technology the control is busy rather than broken.
       aria-busy={loading || undefined}
       {...props}
     >

@@ -5,20 +5,21 @@ import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Labelled form field with inline validation messaging.
+ * Labelled input with inline validation.
  *
- * The label, the input, the hint and the error are wired together with
- * generated ids so that `aria-describedby` and `aria-invalid` are always
- * correct. A screen-reader user hears the error attached to the field rather
- * than finding stray red text elsewhere on the page.
+ * Label, input, hint and error are wired together with generated ids so
+ * `aria-describedby` and `aria-invalid` are always correct — a screen-reader
+ * user hears the error attached to the field instead of finding orphaned red
+ * text somewhere on the page.
+ *
+ * The inset shadow on focus is the same offset-print idea as the buttons,
+ * pointing inward: the field looks stamped into the paper while you type.
  */
 
 interface FieldProps extends Omit<ComponentPropsWithoutRef<"input">, "id"> {
   label: string;
-  /** Messages from the server action, keyed by field name. */
   errors?: string[];
   hint?: ReactNode;
-  /** Optional element rendered inside the field's right edge. */
   trailing?: ReactNode;
 }
 
@@ -38,11 +39,14 @@ export function Field({
   const hasError = Boolean(errors?.length);
 
   return (
-    <div className="space-y-2">
-      <label htmlFor={id} className="block text-sm font-medium text-ink">
+    <div className="space-y-1.5">
+      <label
+        htmlFor={id}
+        className="block text-xs font-bold uppercase tracking-widest text-ink-soft"
+      >
         {label}
         {required && (
-          <span className="ml-1 text-ember" aria-hidden>
+          <span className="ml-1 text-orange" aria-hidden>
             *
           </span>
         )}
@@ -59,15 +63,13 @@ export function Field({
               .join(" ") || undefined
           }
           className={cn(
-            "w-full h-11 px-3.5 rounded-xl",
-            "bg-surface border text-ink placeholder:text-faint",
-            "transition-colors duration-200",
-            "focus:outline-none focus-visible:outline-none",
+            "w-full h-12 px-3.5 rounded-xl border-2 bg-paper text-ink",
+            "placeholder:text-ink-faint",
+            "transition-[box-shadow,border-color] duration-150",
+            "focus:outline-none",
             hasError
-              ? "border-danger/60 focus:border-danger"
-              : "border-line focus:border-mint/60",
-            // The ring is drawn with box-shadow so it does not shift layout.
-            "focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-mint)_20%,transparent)]",
+              ? "border-danger focus:shadow-[inset_3px_3px_0_0_var(--color-danger)]"
+              : "border-ink focus:shadow-[inset_3px_3px_0_0_var(--color-teal)]",
             trailing && "pr-12",
             className,
           )}
@@ -75,18 +77,18 @@ export function Field({
         />
 
         {trailing && (
-          <div className="absolute inset-y-0 right-3 flex items-center text-muted">
+          <div className="absolute inset-y-0 right-3 flex items-center text-ink-faint">
             {trailing}
           </div>
         )}
       </div>
 
       {hasError ? (
-        <p id={errorId} className="text-sm text-danger">
+        <p id={errorId} className="text-sm font-medium text-danger">
           {errors!.join(". ")}
         </p>
       ) : hint ? (
-        <p id={hintId} className="text-sm text-faint">
+        <p id={hintId} className="text-sm text-ink-faint">
           {hint}
         </p>
       ) : null}

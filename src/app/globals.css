@@ -1,93 +1,98 @@
 @import "tailwindcss";
 
 /**
- * Digital Heroes design tokens.
+ * Digital Heroes design system — retro sports-poster.
  *
- * The palette is taken from the PRD document's own visual language — deep
- * near-black with a green undertone, warm cream text, a sage-mint primary and a
- * terracotta ember accent. It reads as a modern charitable brand, not a golf
- * club: no fairway greens, no plaid, no club imagery (PRD §12 AVOID).
+ * The reference is 1970s screen-printed sports and travel posters: warm paper
+ * stock, a small palette of saturated flat inks, heavy display type, hard
+ * offset shadows and no gradients pretending to be light.
  *
- * Dark-first is a deliberate choice. The product leads with charitable impact
- * and a monthly draw; a dark canvas makes the money figures and the draw
- * numbers the brightest things on screen, which is exactly where attention
- * belongs.
+ * This satisfies PRD §12 rather than fighting it. The brief bans "golf clichés
+ * — fairways, plaid, club imagery as primary design language", not colour and
+ * not warmth. A screen-print palette reads as charitable, optimistic and
+ * human, which is what "emotion-driven, leading with charitable impact" asks
+ * for — and it looks nothing like the mahogany-and-fairway-photography house
+ * style of every existing golf website.
+ *
+ * Professional here means disciplined: a fixed palette, one shadow treatment,
+ * one border weight, generous spacing, and contrast ratios that pass AA.
  */
 
 @theme {
-  /* --- Surfaces, darkest to lightest --- */
-  --color-canvas: #080d0b;
-  --color-surface: #0e1613;
-  --color-elevated: #15201c;
-  --color-line: #1f2d28;
-  --color-line-strong: #2d403a;
+  /* --- Paper and ink --- */
+  --color-cream: #f7efdd; /* page */
+  --color-cream-deep: #eee1c4; /* recessed panels */
+  --color-paper: #fffcf4; /* cards */
 
-  /* --- Text --- */
-  --color-ink: #f2efe9;
-  --color-muted: #96a69e;
-  --color-faint: #64756d;
+  --color-ink: #1b1714; /* headings, body */
+  --color-ink-soft: #55493e; /* secondary text */
+  --color-ink-faint: #8a7a6a; /* hints, captions */
 
-  /* --- Primary: sage mint --- */
-  --color-mint: #8fc9a5;
-  --color-mint-bright: #a8dcbb;
-  --color-mint-deep: #3d6b52;
-  /* Text placed on a mint fill. Near-black for a 10:1 contrast ratio. */
-  --color-mint-ink: #06130c;
-
-  /* --- Accent: terracotta ember, for money and urgency --- */
-  --color-ember: #c8813f;
-  --color-ember-bright: #dda063;
+  /* --- The five inks --- */
+  --color-orange: #e2571f; /* primary action */
+  --color-orange-deep: #c04516;
+  --color-mustard: #e8a72c; /* highlights, prize money */
+  --color-teal: #12807a; /* information, links */
+  --color-forest: #1e4a35; /* charity, growth */
+  --color-plum: #8c3b5c; /* draw numbers, rarity */
 
   /* --- Status --- */
-  --color-danger: #e06a5b;
-  --color-warn: #d9a441;
+  --color-danger: #b3321f;
+  --color-success: #1e6b45;
 
   /* --- Type --- */
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-display: var(--font-display), ui-serif, Georgia, serif;
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo-black), var(--font-archivo), sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
 
-  /* --- Motion (PRD §12 ANIMATIONS: subtle, not decorative) --- */
+  /* --- The one shadow. Hard, offset, no blur — a screen-print misregister. --- */
+  --shadow-retro: 4px 4px 0 0 var(--color-ink);
+  --shadow-retro-sm: 2px 2px 0 0 var(--color-ink);
+  --shadow-retro-lg: 7px 7px 0 0 var(--color-ink);
+
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
   html {
-    color-scheme: dark;
+    /* Light-only by design. A screen-print palette inverted to dark stops
+       being a screen print, and a half-hearted dark mode is worse than none. */
+    color-scheme: light;
   }
 
   body {
-    background-color: var(--color-canvas);
+    background-color: var(--color-cream);
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
 
-  /*
-   * A visible focus ring on keyboard navigation only. Removing focus styles
-   * entirely is the single most common way a polished-looking interface becomes
-   * unusable without a mouse.
-   */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.03;
+    text-transform: uppercase;
+  }
+
   :focus-visible {
-    outline: 2px solid var(--color-mint);
+    outline: 3px solid var(--color-teal);
     outline-offset: 2px;
-    border-radius: 4px;
   }
 
   ::selection {
-    background-color: var(--color-mint);
-    color: var(--color-mint-ink);
+    background-color: var(--color-mustard);
+    color: var(--color-ink);
   }
 
-  /* Numeric columns line up when digits share a width. */
   .tabular {
     font-variant-numeric: tabular-nums;
   }
 
-  /*
-   * Respect the OS "reduce motion" setting. The PRD asks for motion throughout;
-   * for users who have asked their system for less of it, that request wins.
-   */
+  /* The PRD asks for motion throughout; a user who has asked their OS for less
+     of it outranks the brief. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -100,13 +105,81 @@
   }
 }
 
+@layer components {
+  /**
+   * Paper card: thick keyline plus a hard offset shadow. Lifts on hover by
+   * moving *toward* the shadow, which reads as the card being pressed up off
+   * the page rather than a generic CSS hover.
+   */
+  .card-retro {
+    background-color: var(--color-paper);
+    border: 2px solid var(--color-ink);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-retro);
+  }
+
+  .card-lift {
+    transition:
+      transform 0.18s var(--ease-out-soft),
+      box-shadow 0.18s var(--ease-out-soft);
+  }
+
+  .card-lift:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-retro-lg);
+  }
+}
+
 @layer utilities {
-  /* Subtle ambient glow used behind hero and auth panels. */
-  .glow-mint {
-    background-image: radial-gradient(
-      60% 60% at 50% 0%,
-      color-mix(in oklab, var(--color-mint) 18%, transparent) 0%,
-      transparent 70%
+  /**
+   * Print grain. A single inline feTurbulence at very low opacity, fixed to the
+   * viewport so it does not scroll with content — the way paper texture sits
+   * under ink rather than moving with it.
+   */
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.32;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+  }
+
+  /** Radiating sunburst behind hero content. */
+  .sunburst {
+    background-image: repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      color-mix(in oklab, var(--color-mustard) 38%, transparent) 0deg 7deg,
+      transparent 7deg 14deg
     );
+    mask-image: radial-gradient(circle at 50% 50%, #000 0%, transparent 68%);
+  }
+
+  /** Repeating stripe band, for section dividers and ticker rails. */
+  .stripes {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      var(--color-ink) 0 2px,
+      transparent 2px 9px
+    );
+  }
+
+  .text-outline {
+    -webkit-text-stroke: 2px var(--color-ink);
+    color: transparent;
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-marquee {
+    animation: marquee 32s linear infinite;
   }
 }
