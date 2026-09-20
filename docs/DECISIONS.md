@@ -345,3 +345,44 @@ you were.
 **Rule taken from this.** A route that exists but is not linked does not exist
 to a user. Link coverage is now checked against the route list rather than
 assumed.
+
+---
+
+## D14 · Proof screenshots stored in Postgres, served through an authorised route
+
+**PRD §09 PROOF UPLOAD — "Screenshot of scores from the golf platform."** The
+brief says nothing about where the file lives.
+
+**Decision.** Files are stored as `bytea` in a dedicated `uploads` table and
+served by `/api/uploads/[id]`, which authorises every request against the
+session. There is no public URL and no signed link.
+
+**Why not object storage.** The usual answer is a bucket, and at volume it is
+the right one. These files are not that: only winners upload, a capped
+screenshot is small, and the content is a named person's scorecard attached to a
+payout claim — private by default. Postgres gives no second service to
+provision, identical behaviour on local Docker and Neon, and access control
+that is a `WHERE` clause rather than a presigned-URL scheme that has to be got
+right. The bytes live in their own table so listing verifications never drags
+image data through a query, which is also the seam to move to a bucket later:
+the serving route is the only thing that reads `data`.
+
+**The real risk, and how it is closed.** The dangerous part of accepting files
+is not storage, it is *serving them back*. `File.type` is supplied by the
+client, so an HTML document labelled `image/png` would be stored and later
+served as HTML — executing script in our own origin, with the victim's session.
+
+So the content type is derived from the file's own magic bytes, never the
+claim; only PNG, JPEG and WebP are accepted; and SVG is refused outright because
+it is simultaneously a legitimate image and an XML document that can carry
+`<script>`. Responses add `X-Content-Type-Options: nosniff` and a
+`default-src 'none'; sandbox` CSP so that even a mistake in that logic cannot
+execute. Filenames are stripped of CRLF, quotes and path separators before being
+echoed into `Content-Disposition`.
+
+**Verified, not assumed.** `npm run verify:uploads` asserts the disguised-file
+cases directly — HTML-as-PNG, SVG, PDF-as-PNG, truncated headers, oversized
+files, and header-injection filenames. Route authorisation is checked live:
+anonymous, a different signed-in user, and a malformed id all receive 404 (not
+403 — confirming an id exists would leak that someone made a claim), while the
+owner and an administrator receive 200.

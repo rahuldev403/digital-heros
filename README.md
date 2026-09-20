@@ -63,6 +63,7 @@ Created by `npm run db:seed`. Configurable via `SEED_*` variables in `.env.local
 | `npm run dev:session` | Mint a session cookie for a seeded account (local DB only) |
 | `npm run stripe:sync` | Create/update Stripe products and prices from the plans table |
 | `npm run verify:checkout` | Create real Checkout sessions and assert price, currency and metadata |
+| `npm run verify:uploads` | Assert upload validation rejects disguised and oversized files |
 
 A web DB browser is also available at <http://localhost:8080> while the container runs
 (server `postgres`, user `dh`, password `dh_local_dev`, database `digital_heroes`).
@@ -119,7 +120,7 @@ changes against a live database can be read before they run.
 - [x] **Phase 3** — Charity directory, selection, contributions
 - [x] **Phase 4** — Score engine
 - [x] **Phase 5** — Draw and prize engine
-- [ ] **Phase 6** — Winner verification and payouts
+- [x] **Phase 6** — Winner verification, proof upload and payouts
 - [x] **Phase 7** — User dashboard
 - [x] **Phase 8** — Admin dashboard (users, draws, charities, winners, reports)
 - [ ] **Phase 9** — Public site and UI polish

@@ -38,7 +38,7 @@ export default async function AdminWinnersPage() {
       drawName: draws.name,
       winningNumbers: draws.winningNumbers,
       entryNumbers: drawEntries.numbers,
-      proofUrl: winnerVerifications.fileUrl,
+      proofUploadId: winnerVerifications.uploadId,
       proofNote: winnerVerifications.note,
     })
     .from(drawWinners)
@@ -113,9 +113,9 @@ export default async function AdminWinnersPage() {
                     <NumberRow numbers={row.winningNumbers ?? []} tone="teal" />
                   </div>
 
-                  {row.proofUrl ? (
+                  {row.proofUploadId ? (
                     <a
-                      href={row.proofUrl}
+                      href={`/api/uploads/${row.proofUploadId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-block text-sm font-semibold text-teal underline underline-offset-4"
