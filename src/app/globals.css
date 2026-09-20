@@ -1,26 +1,112 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/**
+ * Digital Heroes design tokens.
+ *
+ * The palette is taken from the PRD document's own visual language — deep
+ * near-black with a green undertone, warm cream text, a sage-mint primary and a
+ * terracotta ember accent. It reads as a modern charitable brand, not a golf
+ * club: no fairway greens, no plaid, no club imagery (PRD §12 AVOID).
+ *
+ * Dark-first is a deliberate choice. The product leads with charitable impact
+ * and a monthly draw; a dark canvas makes the money figures and the draw
+ * numbers the brightest things on screen, which is exactly where attention
+ * belongs.
+ */
+
+@theme {
+  /* --- Surfaces, darkest to lightest --- */
+  --color-canvas: #080d0b;
+  --color-surface: #0e1613;
+  --color-elevated: #15201c;
+  --color-line: #1f2d28;
+  --color-line-strong: #2d403a;
+
+  /* --- Text --- */
+  --color-ink: #f2efe9;
+  --color-muted: #96a69e;
+  --color-faint: #64756d;
+
+  /* --- Primary: sage mint --- */
+  --color-mint: #8fc9a5;
+  --color-mint-bright: #a8dcbb;
+  --color-mint-deep: #3d6b52;
+  /* Text placed on a mint fill. Near-black for a 10:1 contrast ratio. */
+  --color-mint-ink: #06130c;
+
+  /* --- Accent: terracotta ember, for money and urgency --- */
+  --color-ember: #c8813f;
+  --color-ember-bright: #dda063;
+
+  /* --- Status --- */
+  --color-danger: #e06a5b;
+  --color-warn: #d9a441;
+
+  /* --- Type --- */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-display), ui-serif, Georgia, serif;
+
+  /* --- Motion (PRD §12 ANIMATIONS: subtle, not decorative) --- */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    color-scheme: dark;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * A visible focus ring on keyboard navigation only. Removing focus styles
+   * entirely is the single most common way a polished-looking interface becomes
+   * unusable without a mouse.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-mint);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: var(--color-mint);
+    color: var(--color-mint-ink);
+  }
+
+  /* Numeric columns line up when digits share a width. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Respect the OS "reduce motion" setting. The PRD asks for motion throughout;
+   * for users who have asked their system for less of it, that request wins.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Subtle ambient glow used behind hero and auth panels. */
+  .glow-mint {
+    background-image: radial-gradient(
+      60% 60% at 50% 0%,
+      color-mix(in oklab, var(--color-mint) 18%, transparent) 0%,
+      transparent 70%
+    );
+  }
 }
