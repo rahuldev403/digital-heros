@@ -14,8 +14,9 @@ import { z } from "zod";
 const serverEnvSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
-  /** Used to derive session token hashes. Must be long enough to be unguessable. */
-  AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters"),
+  // No signing secret is needed. Session tokens are 256-bit random values and
+  // only their SHA-256 hash is stored (decision D4), so there is nothing to
+  // sign — an earlier AUTH_SECRET requirement was never actually read.
 
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
 

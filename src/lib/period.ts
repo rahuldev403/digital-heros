@@ -81,3 +81,14 @@ export function formatPeriod(periodKey: PeriodKey): string {
     timeZone: "UTC",
   }).format(periodStart(periodKey));
 }
+
+/**
+ * Whole months from one period to another: "2026-01" → "2026-03" is 2.
+ * Negative when `to` is earlier than `from`.
+ */
+export function monthsBetween(from: PeriodKey, to: PeriodKey): number {
+  const a = parsePeriodKey(from);
+  const b = parsePeriodKey(to);
+
+  return (b.year - a.year) * 12 + (b.month - a.month);
+}

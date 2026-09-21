@@ -7,16 +7,19 @@ import { ArrowRight, HeartHandshake, ShieldCheck, Ticket, Trophy } from "lucide-
 import { Button } from "@/components/ui/button";
 import { NumberRow } from "@/components/ui/number-ball";
 import { db } from "@/db";
-import { drawWinners, payments } from "@/db/schema";
+import { drawEntries, drawWinners } from "@/db/schema";
+import { getUserGiving } from "@/lib/giving";
 import { MIN_SCORES_FOR_ENTRY, SCORES_RETAINED } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
 import { formatMoney } from "@/lib/money";
-import { currentPeriodKey, formatPeriod } from "@/lib/period";
+import { currentPeriodKey, formatPeriod, periodDrawDate } from "@/lib/period";
 import { listUserEntries } from "@/lib/services/draws";
 import { listScores } from "@/lib/services/scores";
 import { describeSubscription } from "@/lib/subscription";
 
 export const metadata: Metadata = { title: "Dashboard" };
+
+const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "EUR";
 
 /**
  * User dashboard — PRD §10.
@@ -31,7 +34,7 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default async function DashboardPage() {
   const user = await requireUser("/dashboard");
 
-  const [scores, entries, [winnings], [given]] = await Promise.all([
+  const [scores, entries, [winnings], given, [entryCount]] = await Promise.all([
     listScores(user.id),
     listUserEntries(user.id, 5),
 
@@ -46,17 +49,25 @@ export default async function DashboardPage() {
       .from(drawWinners)
       .where(eq(drawWinners.userId, user.id)),
 
+    // Subscription charity shares plus signed-in donations, succeeded only
+    // (see lib/giving.ts). The previous query here counted neither donations
+    // nor the payment status, so a failed charge counted as money given.
+    getUserGiving(user.id),
+
+    // PRD §10: "draws entered" as a number, not just the recent list.
     db
-      .select({
-        totalMinor: sql<number>`coalesce(sum(${payments.charityAmountMinor}), 0)::int`,
-        currency: sql<string>`coalesce(min(${payments.currency}), 'EUR')`,
-      })
-      .from(payments)
-      .where(eq(payments.userId, user.id)),
+      .select({ total: sql<number>`count(*)::int` })
+      .from(drawEntries)
+      .where(eq(drawEntries.userId, user.id)),
   ]);
 
+  // PRD §10: "upcoming draws". Draws run on the last day of each month.
+  const nextDrawDate = periodDrawDate(currentPeriodKey());
+
   const missingScores = Math.max(0, MIN_SCORES_FOR_ENTRY - scores.length);
-  const isEligible = missingScores === 0;
+  // Entered only with a full set AND an active subscription — the draw engine
+  // locks in active subscribers only, so scores alone are not enough.
+  const isEligible = missingScores === 0 && user.subscription.hasAccess;
   const sub = user.subscription;
 
   return (
@@ -106,21 +117,35 @@ export default async function DashboardPage() {
           }`}
         >
           <p className="text-[0.65rem] font-bold uppercase tracking-widest opacity-75">
-            Next draw
+            Next draw ·{" "}
+            <time dateTime={nextDrawDate.toISOString()}>
+              {new Intl.DateTimeFormat("en-GB", {
+                day: "numeric",
+                month: "long",
+                timeZone: "UTC",
+              }).format(nextDrawDate)}
+            </time>
           </p>
           <p className="mt-1.5 text-lg font-semibold">
             {isEligible
               ? "You are entered"
-              : `${missingScores} more ${missingScores === 1 ? "round" : "rounds"} needed`}
+              : !sub.hasAccess
+                ? "Subscribe to be entered"
+                : `${missingScores} more ${missingScores === 1 ? "round" : "rounds"} needed`}
           </p>
           <p className="mt-0.5 text-sm text-ink-soft">
-            {scores.length} of {SCORES_RETAINED} scores logged
+            {scores.length} of {SCORES_RETAINED} scores logged · {entryCount.total}{" "}
+            {entryCount.total === 1 ? "draw" : "draws"} entered so far
           </p>
 
           {!isEligible && (
             <div className="mt-4">
-              <Button as={Link} href="/dashboard/scores" size="sm">
-                Log a round
+              <Button
+                as={Link}
+                href={sub.hasAccess ? "/dashboard/scores" : "/pricing"}
+                size="sm"
+              >
+                {sub.hasAccess ? "Log a round" : "See plans"}
               </Button>
             </div>
           )}
@@ -177,7 +202,7 @@ export default async function DashboardPage() {
         <StatTile
           icon={HeartHandshake}
           label="You have given"
-          value={formatMoney(given.totalMinor, given.currency)}
+          value={formatMoney(given.totalMinor, CURRENCY)}
           note={user.charityName ? `to ${user.charityName}` : "No cause chosen"}
           tone="bg-forest text-cream"
         />

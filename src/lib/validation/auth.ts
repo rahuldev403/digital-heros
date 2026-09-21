@@ -44,8 +44,12 @@ export const signUpSchema = z.object({
     .max(120, "That name is too long"),
   email: emailSchema,
   password: passwordSchema,
-  /** Chosen at signup (PRD §08.1). Optional here; enforced by the signup flow. */
-  charityId: z.string().uuid("Choose a charity").optional(),
+  /**
+   * Required: "Users select a charity at signup" (PRD §08.1). The form marks the
+   * field required too, but that is a browser hint anyone can skip — this is
+   * the check that holds.
+   */
+  charityId: z.string({ error: "Choose a charity" }).uuid("Choose a charity"),
   charityPercent: z.coerce
     .number()
     .int("Use a whole percentage")

@@ -14,8 +14,18 @@
  * without sanitising, which is not worth doing for a proof screenshot.
  */
 
-/** 5 MB. Comfortably fits a phone screenshot; far below any Postgres concern. */
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+/**
+ * 4MB per file. Fits a full-resolution phone screenshot, and sits under the
+ * 4.5MB request ceiling Vercel imposes on serverless functions (see
+ * next.config.ts) with room for multipart overhead.
+ */
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Charity media is submitted as two files in one form (logo and cover), so each
+ * gets half the budget — together they still fit under the request ceiling.
+ */
+export const MAX_CHARITY_IMAGE_BYTES = 2 * 1024 * 1024;
 
 export const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 
@@ -73,20 +83,23 @@ export type ImageValidationResult =
  * Size is checked before the bytes are read into memory, so an oversized file
  * is rejected without being buffered.
  */
-export async function validateImageUpload(file: File): Promise<ImageValidationResult> {
+export async function validateImageUpload(
+  file: File,
+  maxBytes: number = MAX_UPLOAD_BYTES,
+): Promise<ImageValidationResult> {
   if (!file || file.size === 0) {
     return { ok: false, error: "Choose a file to upload." };
   }
 
-  if (file.size > MAX_UPLOAD_BYTES) {
-    const limitMb = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+  if (file.size > maxBytes) {
+    const limitMb = Math.round(maxBytes / (1024 * 1024));
     return { ok: false, error: `That file is larger than ${limitMb}MB.` };
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
 
   // Re-check after reading: `File.size` is also client-reported.
-  if (bytes.length > MAX_UPLOAD_BYTES) {
+  if (bytes.length > maxBytes) {
     return { ok: false, error: "That file is too large." };
   }
 

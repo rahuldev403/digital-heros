@@ -160,3 +160,28 @@ export function formatMoney(
     minimumFractionDigits: options.hideDecimals || options.compact ? 0 : 2,
   }).format(toMajorUnits(amountMinor));
 }
+
+// ---------------------------------------------------------------------------
+// Amortisation (PRD §07 — yearly subscriptions)
+// ---------------------------------------------------------------------------
+
+/**
+ * One month's slice of an amount spread evenly over `months` months.
+ *
+ * A yearly subscriber is entered in twelve monthly draws, so their prize-pool
+ * contribution has to fund all twelve — not land in the single month they
+ * happened to pay. This divides it exactly: every month gets the floor share,
+ * and the first `total % months` months get one extra minor unit, so the twelve
+ * slices always sum to the original amount with nothing lost to rounding.
+ *
+ *   amortisedShare(2997, 12, k)  →  250 for k = 0..8,  249 for k = 9..11
+ *                                    (9 × 250 + 3 × 249 = 2997)
+ */
+export function amortisedShare(totalMinor: number, months: number, index: number): number {
+  if (months <= 0 || index < 0 || index >= months) return 0;
+
+  const base = Math.floor(totalMinor / months);
+  const remainder = totalMinor - base * months;
+
+  return base + (index < remainder ? 1 : 0);
+}

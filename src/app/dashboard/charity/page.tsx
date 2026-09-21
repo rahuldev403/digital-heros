@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { charities, payments, plans, subscriptions } from "@/db/schema";
+import { charities, plans, subscriptions } from "@/db/schema";
+import { getUserGiving } from "@/lib/giving";
 import { requireUser } from "@/lib/dal";
 import { formatMoney } from "@/lib/money";
 
 import { CharitySettingsForm } from "./_components/charity-settings-form";
 
 export const metadata: Metadata = { title: "Your charity" };
+
+const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "EUR";
 
 /**
  * Charity settings — PRD §08.1.
@@ -20,7 +23,7 @@ export const metadata: Metadata = { title: "Your charity" };
 export default async function CharitySettingsPage() {
   const user = await requireUser("/dashboard/charity");
 
-  const [charityRows, [givenTotal], givenByCharity, [currentPlan]] = await Promise.all([
+  const [charityRows, giving, [currentPlan]] = await Promise.all([
     db
       .select({
         id: charities.id,
@@ -32,26 +35,9 @@ export default async function CharitySettingsPage() {
       .where(eq(charities.isActive, true))
       .orderBy(asc(charities.sortOrder), asc(charities.name)),
 
-    db
-      .select({
-        total: sql<number>`coalesce(sum(${payments.charityAmountMinor}), 0)::int`,
-        currency: sql<string>`coalesce(min(${payments.currency}), 'EUR')`,
-      })
-      .from(payments)
-      .where(and(eq(payments.userId, user.id), eq(payments.status, "succeeded"))),
-
-    // Historic giving, grouped by the charity that actually received it.
-    db
-      .select({
-        charityName: charities.name,
-        total: sql<number>`sum(${payments.charityAmountMinor})::int`,
-        currency: sql<string>`min(${payments.currency})`,
-      })
-      .from(payments)
-      .innerJoin(charities, eq(payments.charityId, charities.id))
-      .where(and(eq(payments.userId, user.id), eq(payments.status, "succeeded")))
-      .groupBy(charities.name)
-      .orderBy(desc(sql`sum(${payments.charityAmountMinor})`)),
+    // Subscription shares plus signed-in donations, with a per-charity
+    // breakdown (see lib/giving.ts).
+    getUserGiving(user.id),
 
     db
       .select({ priceMinor: plans.priceMinor, currency: plans.currency })
@@ -78,7 +64,7 @@ export default async function CharitySettingsPage() {
             You have given
           </p>
           <p className="mt-1.5 font-mono text-3xl font-bold tabular">
-            {formatMoney(givenTotal.total, givenTotal.currency)}
+            {formatMoney(giving.totalMinor, CURRENCY)}
           </p>
         </div>
 
@@ -93,18 +79,18 @@ export default async function CharitySettingsPage() {
         </div>
       </div>
 
-      {givenByCharity.length > 0 && (
+      {giving.byCharity.length > 0 && (
         <section className="card-retro space-y-3 p-6">
           <h2 className="text-xl">Where it went</h2>
           <ul className="divide-y-2 divide-dashed divide-ink/15">
-            {givenByCharity.map((row) => (
+            {giving.byCharity.map((row) => (
               <li
                 key={row.charityName}
                 className="flex items-center justify-between gap-4 py-2.5"
               >
                 <span className="font-medium">{row.charityName}</span>
                 <span className="font-mono font-bold tabular text-forest">
-                  {formatMoney(row.total, row.currency)}
+                  {formatMoney(row.totalMinor, CURRENCY)}
                 </span>
               </li>
             ))}
@@ -117,7 +103,7 @@ export default async function CharitySettingsPage() {
         currentCharityId={user.charityId}
         currentPercent={user.charityPercent}
         planPriceMinor={currentPlan?.priceMinor ?? null}
-        currency={currentPlan?.currency ?? givenTotal.currency}
+        currency={currentPlan?.currency ?? CURRENCY}
       />
     </div>
   );

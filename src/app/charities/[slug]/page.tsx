@@ -8,7 +8,8 @@ import { ArrowLeft, CalendarDays, Globe, MapPin, Users } from "lucide-react";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
-import { charities, charityEvents, donations, payments, users } from "@/db/schema";
+import { charities, charityEvents, users } from "@/db/schema";
+import { getCharityGiving } from "@/lib/giving";
 import { getCurrentUser } from "@/lib/dal";
 import { formatMoney } from "@/lib/money";
 
@@ -16,6 +17,8 @@ import { formatMoney } from "@/lib/money";
  * Charity profile — PRD §08.2 DETAIL: "Description, images, and upcoming
  * events such as golf days."
  */
+
+const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "EUR";
 
 async function loadCharity(slug: string) {
   const [charity] = await db
@@ -49,7 +52,7 @@ export default async function CharityProfilePage({
 
   if (!charity) notFound();
 
-  const [user, events, [raised], [supporters], [donated]] = await Promise.all([
+  const [user, events, giving, [supporters]] = await Promise.all([
     getCurrentUser(),
 
     // Only what is still ahead; a past golf day is not a reason to give.
@@ -64,27 +67,13 @@ export default async function CharityProfilePage({
       )
       .orderBy(asc(charityEvents.startsAt)),
 
-    db
-      .select({
-        total: sql<number>`coalesce(sum(${payments.charityAmountMinor}), 0)::int`,
-        currency: sql<string>`coalesce(min(${payments.currency}), 'EUR')`,
-      })
-      .from(payments)
-      .where(
-        and(eq(payments.charityId, charity.id), eq(payments.status, "succeeded")),
-      ),
+    // Subscription shares plus one-off donations (see lib/giving.ts).
+    getCharityGiving(charity.id),
 
     db
       .select({ total: sql<number>`count(*)::int` })
       .from(users)
       .where(eq(users.charityId, charity.id)),
-
-    // Direct one-off gifts (PRD §08.1), counted alongside subscription
-    // contributions — both are money this charity actually received.
-    db
-      .select({ total: sql<number>`coalesce(sum(${donations.amountMinor}), 0)::int` })
-      .from(donations)
-      .where(and(eq(donations.charityId, charity.id), eq(donations.status, "succeeded"))),
   ]);
 
   const isMyCharity = user?.charityId === charity.id;
@@ -153,7 +142,7 @@ export default async function CharityProfilePage({
                 Raised through Digital Heroes
               </p>
               <p className="mt-1.5 font-mono text-3xl font-bold tabular">
-                {formatMoney(raised.total + donated.total, raised.currency)}
+                {formatMoney(giving.totalMinor, CURRENCY)}
               </p>
             </div>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { Trash2 } from "lucide-react";
 
@@ -23,6 +24,7 @@ export const metadata: Metadata = { title: "Your scores" };
 export default async function ScoresPage() {
   const user = await requireUser("/dashboard/scores");
   const rows = await listScores(user.id);
+  const canEdit = user.subscription.hasAccess;
 
   const remaining = Math.max(0, MIN_SCORES_FOR_ENTRY - rows.length);
   const atCapacity = rows.length >= SCORES_RETAINED;
@@ -40,20 +42,43 @@ export default async function ScoresPage() {
       {/* Eligibility, stated plainly. */}
       <div
         className={`rounded-2xl border-2 border-ink p-5 shadow-retro ${
-          remaining === 0 ? "bg-forest text-cream" : "bg-mustard"
+          remaining === 0 && canEdit ? "bg-forest text-cream" : "bg-mustard"
         }`}
       >
         <p className="text-[0.65rem] font-bold uppercase tracking-widest opacity-80">
           Draw eligibility
         </p>
+        {/* Entry needs both a full set AND an active subscription — the draw
+            engine only locks in active subscribers, so saying "you are
+            entered" on scores alone would be untrue. */}
         <p className="mt-1.5 text-lg font-semibold">
-          {remaining === 0
-            ? "You have a full set — you are entered in the next draw."
-            : `${remaining} more ${remaining === 1 ? "round" : "rounds"} and you are in the next draw.`}
+          {!canEdit
+            ? "Only active subscribers are entered in the draw."
+            : remaining === 0
+              ? "You have a full set — you are entered in the next draw."
+              : `${remaining} more ${remaining === 1 ? "round" : "rounds"} and you are in the next draw.`}
         </p>
       </div>
 
-      <ScoreForm atCapacity={atCapacity} />
+      {canEdit ? (
+        <ScoreForm atCapacity={atCapacity} />
+      ) : (
+        // PRD §04: non-subscribers get restricted access. Scores stay visible —
+        // they are the member's own history — but cannot be changed until the
+        // subscription is active again.
+        <section className="card-retro flex flex-wrap items-center justify-between gap-4 bg-mustard p-6">
+          <div className="space-y-1">
+            <h2 className="text-2xl">Subscribe to log rounds</h2>
+            <p className="text-sm">
+              Score entry and draw entry come with an active subscription. Your
+              scores below are kept either way.
+            </p>
+          </div>
+          <Button as={Link} href="/pricing" size="lg">
+            See plans
+          </Button>
+        </section>
+      )}
 
       <section className="space-y-4">
         <div className="flex items-baseline justify-between">
@@ -97,17 +122,19 @@ export default async function ScoresPage() {
                   </span>
                 )}
 
-                <form action={deleteScoreAction}>
-                  <input type="hidden" name="scoreId" value={score.id} />
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Delete round from ${score.playedOn}`}
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </Button>
-                </form>
+                {canEdit && (
+                  <form action={deleteScoreAction}>
+                    <input type="hidden" name="scoreId" value={score.id} />
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Delete round from ${score.playedOn}`}
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </Button>
+                  </form>
+                )}
               </li>
             ))}
           </ul>

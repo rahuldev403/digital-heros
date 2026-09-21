@@ -15,6 +15,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { db } from "@/db";
 import { charities, drawWinners, payments, subscriptions, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/dal";
+import { charityRaisedSql, getPlatformGiving } from "@/lib/giving";
 import { formatMoney } from "@/lib/money";
 import { currentPeriodKey, formatPeriod } from "@/lib/period";
 import { calculatePool, listAllDraws } from "@/lib/services/draws";
@@ -39,6 +40,7 @@ export default async function AdminOverviewPage() {
     drawRows,
     [pendingClaims],
     topCharities,
+    giving,
   ] = await Promise.all([
     db
       .select({
@@ -68,17 +70,15 @@ export default async function AdminOverviewPage() {
       .from(drawWinners)
       .where(eq(drawWinners.payoutStatus, "pending")),
 
+    // Ranked by everything received: subscription shares plus donations,
+    // succeeded only (see lib/giving.ts).
     db
-      .select({
-        name: charities.name,
-        slug: charities.slug,
-        total: sql<number>`coalesce(sum(${payments.charityAmountMinor}), 0)::int`,
-      })
+      .select({ name: charities.name, slug: charities.slug, total: charityRaisedSql(charities.id) })
       .from(charities)
-      .leftJoin(payments, eq(payments.charityId, charities.id))
-      .groupBy(charities.id, charities.name, charities.slug)
-      .orderBy(desc(sql`coalesce(sum(${payments.charityAmountMinor}), 0)`))
+      .orderBy(desc(charityRaisedSql(charities.id)))
       .limit(5),
+
+    getPlatformGiving(),
   ]);
 
   return (
@@ -112,8 +112,8 @@ export default async function AdminOverviewPage() {
         <Tile
           icon={HeartHandshake}
           label="Charity total"
-          value={formatMoney(ledger.charityTotal, ledger.currency)}
-          note="all time"
+          value={formatMoney(giving.totalMinor, ledger.currency)}
+          note={`${formatMoney(giving.subscriptionMinor, ledger.currency)} subscriptions · ${formatMoney(giving.donationMinor, ledger.currency)} donations`}
           tone="bg-forest text-cream"
         />
         <Tile

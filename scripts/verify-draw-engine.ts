@@ -8,6 +8,8 @@ import {
   createRng,
   drawWinningNumbers,
 } from "@/lib/draw-engine";
+import { amortisedShare } from "@/lib/money";
+import { monthsBetween } from "@/lib/period";
 
 /**
  * Draw engine verification.
@@ -204,6 +206,29 @@ console.log("\n=== RNG sanity ===");
   check("all values in [0,1)", values.every((v) => v >= 0 && v < 1));
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   check("mean near 0.5", Math.abs(mean - 0.5) < 0.05, `mean=${mean.toFixed(4)}`);
+}
+
+console.log("\n=== Yearly amortisation (decision D17) ===");
+{
+  const totals = [0, 1, 11, 12, 13, 2997, 29970, 99_999, 123_457];
+  let exact = true;
+  let even = true;
+
+  for (const total of totals) {
+    const slices = Array.from({ length: 12 }, (_, k) => amortisedShare(total, 12, k));
+    if (slices.reduce((a, b) => a + b, 0) !== total) exact = false;
+    if (Math.max(...slices) - Math.min(...slices) > 1) even = false;
+  }
+
+  check("twelve slices always sum to the whole", exact);
+  check("slices never differ by more than one cent", even);
+  check("index outside the year funds nothing", amortisedShare(2997, 12, 12) === 0 && amortisedShare(2997, 12, -1) === 0);
+  check("a yearly €29.97 pool share funds ~€2.50 a month", amortisedShare(2997, 12, 0) === 250);
+
+  check("monthsBetween within a year", monthsBetween("2026-01", "2026-03") === 2);
+  check("monthsBetween across a year boundary", monthsBetween("2025-11", "2026-02") === 3);
+  check("monthsBetween same month is zero", monthsBetween("2026-09", "2026-09") === 0);
+  check("monthsBetween backwards is negative", monthsBetween("2026-09", "2026-08") === -1);
 }
 
 console.log(

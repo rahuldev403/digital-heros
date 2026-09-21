@@ -1,11 +1,11 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { charities, users } from "@/db/schema";
 import { CHARITY_MIN_PERCENT } from "@/lib/constants";
 import { fakePasswordCheck, hashPassword, verifyPassword } from "@/lib/password";
 import { createSession, destroySession } from "@/lib/session";
@@ -79,6 +79,23 @@ export async function signUpAction(
   }
 
   const { fullName, email, password, charityId, charityPercent } = parsed.data;
+
+  // The id arrives from the client, so confirm it names a charity that is
+  // actually accepting supporters. A forged or stale id would otherwise reach
+  // the insert and fail on the foreign key as an unhandled error.
+  const [charity] = await db
+    .select({ id: charities.id })
+    .from(charities)
+    .where(and(eq(charities.id, charityId), eq(charities.isActive, true)))
+    .limit(1);
+
+  if (!charity) {
+    return {
+      status: "error",
+      message: "Please choose one of the listed charities.",
+      fieldErrors: { charityId: ["That charity is not available"] },
+    };
+  }
 
   const passwordHash = await hashPassword(password);
 

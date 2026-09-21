@@ -16,8 +16,6 @@ npm install
 
 # 2. Configure environment
 cp .env.example .env.local
-#    Then generate a session secret and paste it into AUTH_SECRET:
-node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 # 3. Start Postgres (Docker)
 npm run db:up
@@ -58,6 +56,43 @@ reconciles the session directly. The secret is what keeps **renewals,
 cancellations and failed payments** in sync afterwards.
 
 Test card: `4242 4242 4242 4242`, any future expiry, any CVC.
+
+### Deploy (Vercel + Neon)
+
+1. **Database.** Create a Neon project and copy its **pooled** connection string
+   (the host contains `-pooler`). With `DATABASE_URL` set to it, run:
+
+   ```bash
+   npm run db:migrate          # creates the schema — safe to re-run
+   npm run db:seed -- --force  # loads demo data; refuses without --force on a non-local DB
+   npm run stripe:sync         # links the seeded plans to Stripe prices
+   ```
+
+2. **Vercel.** Import the repository, then set these environment variables:
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | Neon pooled connection string |
+   | `NEXT_PUBLIC_APP_URL` | `https://<your-app>.vercel.app` |
+   | `STRIPE_SECRET_KEY` | `sk_test_…` |
+   | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_…` |
+   | `STRIPE_WEBHOOK_SECRET` | from step 3 |
+   | `NEXT_PUBLIC_CURRENCY` | `EUR` |
+
+   The build needs no database access, so it succeeds even before Neon is set
+   up. Pages that show live figures render per request.
+
+3. **Stripe webhook.** In the Stripe dashboard, add an endpoint at
+   `https://<your-app>.vercel.app/api/webhooks/stripe` for these events:
+   `checkout.session.completed`, `customer.subscription.created`,
+   `customer.subscription.updated`, `customer.subscription.deleted`,
+   `invoice.paid`, `invoice.payment_failed`. Copy its signing secret into
+   `STRIPE_WEBHOOK_SECRET` and redeploy. The local `stripe listen` secret does
+   not work in production.
+
+Uploads (winner proof, charity images) are stored in Postgres, so no separate
+storage service is needed. Vercel caps request bodies at 4.5MB, which is why
+uploads are limited to 4MB per proof and 2MB per charity image.
 
 ### Demo credentials
 

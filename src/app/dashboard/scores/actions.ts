@@ -11,7 +11,15 @@ import { addScore, deleteScore, updateScore } from "@/lib/services/scores";
  * Each one re-resolves the current user through the DAL rather than trusting
  * anything in the form: a server action is a public HTTP endpoint, and a user
  * id submitted by the client is an id the client chose.
+ *
+ * Entering and editing scores is a subscriber capability (PRD §03 ROLE 02),
+ * and non-subscribers get "restricted access to platform features" (§04). So
+ * every mutation checks the live subscription — hiding the form is not enough,
+ * because the action can be called without the form.
  */
+
+const SUBSCRIBE_MESSAGE =
+  "An active subscription is needed to log or change scores. Your existing scores are kept.";
 
 export type ScoreFormState =
   | { status: "idle" }
@@ -25,6 +33,7 @@ export async function addScoreAction(
   formData: FormData,
 ): Promise<ScoreFormState> {
   const user = await requireUser("/dashboard/scores");
+  if (!user.subscription.hasAccess) return { status: "error", message: SUBSCRIBE_MESSAGE };
 
   const result = await addScore(user.id, {
     playedOn: String(formData.get("playedOn") ?? ""),
@@ -55,6 +64,7 @@ export async function updateScoreAction(
   formData: FormData,
 ): Promise<ScoreFormState> {
   const user = await requireUser("/dashboard/scores");
+  if (!user.subscription.hasAccess) return { status: "error", message: SUBSCRIBE_MESSAGE };
 
   const result = await updateScore(user.id, String(formData.get("scoreId") ?? ""), {
     playedOn: String(formData.get("playedOn") ?? ""),
@@ -74,6 +84,7 @@ export async function updateScoreAction(
 
 export async function deleteScoreAction(formData: FormData): Promise<void> {
   const user = await requireUser("/dashboard/scores");
+  if (!user.subscription.hasAccess) return;
 
   await deleteScore(user.id, String(formData.get("scoreId") ?? ""));
 

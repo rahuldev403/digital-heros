@@ -7,7 +7,8 @@ import { ExternalLink, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { db } from "@/db";
-import { charities, charityEvents, payments, users } from "@/db/schema";
+import { charities, charityEvents, users } from "@/db/schema";
+import { charityRaisedSql } from "@/lib/giving";
 import { requireAdmin } from "@/lib/dal";
 import { formatMoney } from "@/lib/money";
 
@@ -30,11 +31,8 @@ export default async function AdminCharitiesPage() {
       category: charities.category,
       isActive: charities.isActive,
       isFeatured: charities.isFeatured,
-      raisedMinor: sql<number>`(
-        select coalesce(sum(p.charity_amount_minor), 0)::int
-        from ${payments} p
-        where p.charity_id = ${charities.id} and p.status = 'succeeded'
-      )`,
+      // Subscription shares plus donations (see lib/giving.ts).
+      raisedMinor: charityRaisedSql(charities.id),
       supporters: sql<number>`(
         select count(*)::int from ${users} u where u.charity_id = ${charities.id}
       )`,

@@ -7,7 +7,8 @@ import { ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
-import { charities, charityEvents, payments, users } from "@/db/schema";
+import { charities, charityEvents, donations, payments, users } from "@/db/schema";
+import { getCharityGiving } from "@/lib/giving";
 import { requireAdmin } from "@/lib/dal";
 import { formatMoney } from "@/lib/money";
 
@@ -20,6 +21,8 @@ import {
 } from "./_components/charity-admin-panels";
 
 export const metadata: Metadata = { title: "Edit charity" };
+
+const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "EUR";
 
 export default async function EditCharityPage({
   params,
@@ -38,21 +41,27 @@ export default async function EditCharityPage({
 
   if (!charity) notFound();
 
-  const [events, [raised], [supporters]] = await Promise.all([
+  const [events, giving, [refs], [supporters]] = await Promise.all([
     db
       .select()
       .from(charityEvents)
       .where(eq(charityEvents.charityId, id))
       .orderBy(asc(charityEvents.startsAt)),
 
+    // Subscription shares plus donations, succeeded only (see lib/giving.ts).
+    getCharityGiving(id),
+
+    // Rows of any status that reference this charity. A failed payment or an
+    // abandoned donation still holds a foreign key, so it still blocks a delete.
     db
       .select({
-        total: sql<number>`coalesce(sum(${payments.charityAmountMinor}), 0)::int`,
-        count: sql<number>`count(*)::int`,
-        currency: sql<string>`coalesce(min(${payments.currency}), 'EUR')`,
+        total: sql<number>`(
+          (select count(*) from ${payments} p where p.charity_id = ${id})
+          + (select count(*) from ${donations} d where d.charity_id = ${id})
+        )::int`,
       })
-      .from(payments)
-      .where(eq(payments.charityId, id)),
+      .from(charities)
+      .where(eq(charities.id, id)),
 
     db
       .select({ total: sql<number>`count(*)::int` })
@@ -61,7 +70,7 @@ export default async function EditCharityPage({
   ]);
 
   // Drives whether delete is a real delete or a deactivation.
-  const hasHistory = raised.count > 0 || supporters.total > 0;
+  const hasHistory = (refs?.total ?? 0) > 0 || supporters.total > 0;
 
   return (
     <div className="space-y-8">
@@ -91,7 +100,7 @@ export default async function EditCharityPage({
               Raised
             </p>
             <p className="font-mono font-bold tabular">
-              {formatMoney(raised.total, raised.currency)}
+              {formatMoney(giving.totalMinor, CURRENCY)}
             </p>
           </div>
           <div className="rounded-xl border-2 border-ink bg-mustard px-4 py-3">

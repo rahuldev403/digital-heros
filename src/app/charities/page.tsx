@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, or } from "drizzle-orm";
 import { ArrowRight, Search } from "lucide-react";
 
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
-import { charities, payments } from "@/db/schema";
+import { charities } from "@/db/schema";
+import { charityRaisedSql } from "@/lib/giving";
 import { formatMoney } from "@/lib/money";
+
+const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "EUR";
 
 export const metadata: Metadata = {
   title: "Charities",
@@ -46,9 +49,9 @@ export default async function CharitiesPage({
 
   if (category) conditions.push(eq(charities.category, category));
 
-  const [rows, categoryRows, raisedRows] = await Promise.all([
+  const [rows, categoryRows] = await Promise.all([
     db
-      .select()
+      .select({ charity: charities, raisedMinor: charityRaisedSql(charities.id) })
       .from(charities)
       .where(and(...conditions))
       .orderBy(asc(charities.sortOrder), asc(charities.name)),
@@ -58,22 +61,7 @@ export default async function CharitiesPage({
       .from(charities)
       .where(eq(charities.isActive, true))
       .orderBy(asc(charities.category)),
-
-    // Raised-per-charity, from the immutable ledger.
-    db
-      .select({
-        charityId: payments.charityId,
-        total: sql<number>`coalesce(sum(${payments.charityAmountMinor}), 0)::int`,
-        currency: sql<string>`min(${payments.currency})`,
-      })
-      .from(payments)
-      .where(eq(payments.status, "succeeded"))
-      .groupBy(payments.charityId),
   ]);
-
-  const raisedByCharity = new Map(
-    raisedRows.map((row) => [row.charityId, row]),
-  );
 
   return (
     <>
@@ -165,8 +153,7 @@ export default async function CharitiesPage({
             </div>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((charity) => {
-                const raised = raisedByCharity.get(charity.id);
+              {rows.map(({ charity, raisedMinor }) => {
 
                 return (
                   <article
@@ -203,10 +190,7 @@ export default async function CharitiesPage({
                             Raised
                           </p>
                           <p className="font-mono font-bold tabular text-forest">
-                            {formatMoney(
-                              raised?.total ?? 0,
-                              raised?.currency ?? "EUR",
-                            )}
+                            {formatMoney(raisedMinor, CURRENCY)}
                           </p>
                         </div>
 

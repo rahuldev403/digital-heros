@@ -429,3 +429,60 @@ answer impossible to write.
 **Verified.** `npm run verify:donations` creates a real Stripe session, settles
 it twice (the second is a no-op), and asserts the payments ledger row count and
 the current prize pool are unchanged before and after.
+
+---
+
+## D17 · Yearly subscriptions fund all twelve monthly pools
+
+**PRD §07 — "Auto-calculation of each pool tier based on active subscriber
+count."**
+
+**Found on re-reading the PRD against live data.** Five yearly subscribers had
+paid €149.85 into the prize pool, and all of it landed in the single month they
+paid. They are entered in *every* monthly draw for a year, so they funded one
+draw and rode free in the other eleven — that month's pool was inflated about
+3.8×, and the following months were funded by monthly subscribers alone.
+
+**Decision.** `calculatePool` spreads each yearly payment's prize-pool slice
+across the twelve periods it covers, using exact integer division: the floor
+share every month, plus one cent in the first `total mod 12` months. The ledger
+row is unchanged — the payment still happened when it happened — only the
+allocation to draws is spread.
+
+**Verified.** Twelve slices sum exactly to the whole for every amount tested
+(`verify:draw`). On the seeded data, €149.85 now funds €12.50 a month for nine
+months and €12.45 for three: 9 × 12.50 + 3 × 12.45 = 149.85. Published draws
+are snapshots and are not affected retroactively.
+
+---
+
+## D18 · Restricted access for non-subscribers, enforced in the action
+
+**PRD §04 — "Non-subscribers receive restricted access to platform features."**
+§03 lists entering and editing scores as a *subscriber* capability.
+
+**Found on re-reading the PRD.** `requireSubscriber()` existed but was never
+called: anyone signed in could log scores. Only draw entry excluded them.
+
+**Decision.** Score mutations check the live subscription inside the server
+action — hiding the form alone would not be a control, because the action can
+be called without it. A lapsed member still *sees* their scores (they are the
+member's own history) and still sees and can claim past winnings, but cannot
+change scores until they resubscribe. The dashboard and scores page no longer
+tell a lapsed member with five scores that they are "entered", because the draw
+engine only locks in active subscribers.
+
+---
+
+## D19 · Money totals come from one module
+
+**Found by auditing, not by a failing test.** "Raised" was calculated
+independently in eight places. Only the charity profile included one-off
+donations, and two of the eight did not filter by payment status at all — a
+failed card charge counted as money given.
+
+**Decision.** `src/lib/giving.ts` is the only definition of raised and given.
+Pages call it or embed its SQL fragment; none sums the ledger themselves. The
+admin overview's split bars are the one deliberate exception: they check the
+subscription-ledger invariant (charity + pool + platform = gross), which
+donations are kept out of by design (D16).

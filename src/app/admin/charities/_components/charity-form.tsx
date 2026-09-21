@@ -170,7 +170,7 @@ export function CharityForm({ charity }: { charity?: CharityFormValues }) {
       <section className="card-retro space-y-5 p-6">
         <h2 className="text-xl">Media</h2>
         <p className="text-sm text-ink-soft">
-          PNG, JPEG or WebP, up to 5MB. Leave blank to keep the current image.
+          PNG, JPEG or WebP, up to 2MB each. Leave blank to keep the current image.
         </p>
 
         <div className="grid gap-5 sm:grid-cols-2">

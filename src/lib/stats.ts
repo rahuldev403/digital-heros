@@ -1,10 +1,11 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, gte, sql, sum } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { charities, charityEvents, payments, users } from "@/db/schema";
+import { charities, charityEvents, users } from "@/db/schema";
 
+import { charityRaisedSql, getPlatformGiving } from "./giving";
 import { currentPeriodKey } from "./period";
 import { calculatePool } from "./services/draws";
 
@@ -34,15 +35,9 @@ export interface PlatformStats {
 export async function getPlatformStats(): Promise<PlatformStats> {
   const period = currentPeriodKey();
 
-  const [[charityRow], pool, [charityCountRow]] = await Promise.all([
-    // All-time charity contributions from succeeded payments.
-    db
-      .select({
-        total: sum(payments.charityAmountMinor).mapWith(Number),
-        currency: sql<string>`min(${payments.currency})`,
-      })
-      .from(payments)
-      .where(eq(payments.status, "succeeded")),
+  const [giving, pool, [charityCountRow]] = await Promise.all([
+    // Subscription charity shares plus one-off donations (see lib/giving.ts).
+    getPlatformGiving(),
 
     // Reuse the draw engine's own pool calculation rather than re-deriving it
     // here. The homepage and the results page were previously computing this
@@ -58,14 +53,13 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   ]);
 
   return {
-    // SUM over no rows is NULL in SQL, which arrives as null, not 0.
-    charityRaisedMinor: charityRow?.total ?? 0,
+    charityRaisedMinor: giving.totalMinor,
     prizePoolMinor: pool.totalMinor,
     prizePoolBaseMinor: pool.baseMinor,
     rolloverInMinor: pool.rolloverInMinor,
     activeSubscribers: pool.activeSubscribers,
     charityCount: charityCountRow?.total ?? 0,
-    currency: charityRow?.currency ?? process.env.NEXT_PUBLIC_CURRENCY ?? "EUR",
+    currency: process.env.NEXT_PUBLIC_CURRENCY ?? "EUR",
   };
 }
 
@@ -92,11 +86,7 @@ export interface SpotlightCharity {
  * empty spotlight or promotes a cause that can no longer accept supporters.
  */
 export async function getSpotlightCharity(): Promise<SpotlightCharity | null> {
-  const raised = sql<number>`(
-    select coalesce(sum(p.charity_amount_minor), 0)::int
-    from ${payments} p
-    where p.charity_id = ${charities.id} and p.status = 'succeeded'
-  )`;
+  const raised = charityRaisedSql(charities.id);
 
   const [row] = await db
     .select({

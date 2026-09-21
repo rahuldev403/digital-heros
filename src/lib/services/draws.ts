@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -8,6 +8,7 @@ import {
   drawWinners,
   draws,
   payments,
+  plans,
   scores,
   subscriptions,
   users,
@@ -30,7 +31,8 @@ import {
   generateSeed,
   type DrawMode,
 } from "../draw-engine";
-import { formatPeriod, periodDrawDate, shiftPeriodKey } from "../period";
+import { amortisedShare } from "../money";
+import { formatPeriod, monthsBetween, periodDrawDate, shiftPeriodKey } from "../period";
 
 /**
  * Draw lifecycle — PRD §06.
@@ -53,10 +55,17 @@ const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "EUR";
 /**
  * The money available for a period.
  *
- * `base` is summed from the payments ledger — the prize-pool slice that was
+ * `base` is built from the payments ledger — the prize-pool slice that was
  * snapshotted on each payment when it was taken (see decision D2), never
  * recomputed from today's settings. `rolloverIn` is the unclaimed jackpot from
  * the most recent published draw before this one.
+ *
+ * Yearly payments are spread across the twelve months they cover (decision
+ * D17). A yearly subscriber is entered in every monthly draw for a year, so
+ * their contribution must fund every one of those draws — counting it only in
+ * the month they paid would inflate that single pool roughly twelvefold and
+ * leave the other eleven funded by monthly subscribers alone. This is what
+ * makes the pool track the active subscriber count (PRD §07).
  */
 export async function calculatePool(periodKey: string): Promise<{
   baseMinor: number;
@@ -64,11 +73,29 @@ export async function calculatePool(periodKey: string): Promise<{
   totalMinor: number;
   activeSubscribers: number;
 }> {
-  const [[poolRow], [subscriberRow], [previous]] = await Promise.all([
+  // A yearly payment made up to eleven months ago still funds this period.
+  const windowStart = shiftPeriodKey(periodKey, -11);
+
+  const [contributions, [subscriberRow], [previous]] = await Promise.all([
     db
-      .select({ total: sql<number>`coalesce(sum(${payments.prizePoolAmountMinor}), 0)::int` })
+      .select({
+        periodKey: payments.periodKey,
+        prizePoolAmountMinor: payments.prizePoolAmountMinor,
+        interval: plans.interval,
+      })
       .from(payments)
-      .where(and(eq(payments.periodKey, periodKey), eq(payments.status, "succeeded"))),
+      // Left joins: a payment whose subscription row was removed keeps its
+      // money in the pool and is treated as a single-month payment.
+      .leftJoin(subscriptions, eq(payments.subscriptionId, subscriptions.id))
+      .leftJoin(plans, eq(subscriptions.planId, plans.id))
+      .where(
+        and(
+          eq(payments.status, "succeeded"),
+          // "YYYY-MM" strings sort chronologically, so this is a date range.
+          gte(payments.periodKey, windowStart),
+          lte(payments.periodKey, periodKey),
+        ),
+      ),
 
     db
       .select({ total: sql<number>`count(*)::int` })
@@ -83,7 +110,19 @@ export async function calculatePool(periodKey: string): Promise<{
       .limit(1),
   ]);
 
-  const baseMinor = poolRow?.total ?? 0;
+  let baseMinor = 0;
+
+  for (const payment of contributions) {
+    const monthsAgo = monthsBetween(payment.periodKey, periodKey);
+
+    if (payment.interval === "year") {
+      // This period's exact twelfth; the slices sum back to the whole.
+      baseMinor += amortisedShare(payment.prizePoolAmountMinor, 12, monthsAgo);
+    } else if (monthsAgo === 0) {
+      baseMinor += payment.prizePoolAmountMinor;
+    }
+  }
+
   const rolloverInMinor = previous?.rolloverOutMinor ?? 0;
 
   return {

@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
-import { auditLogs, charities, charityEvents, payments, uploads, users } from "@/db/schema";
+import { auditLogs, charities, charityEvents, donations, payments, uploads, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/dal";
-import { validateImageUpload } from "@/lib/image-validation";
+import { MAX_CHARITY_IMAGE_BYTES, validateImageUpload } from "@/lib/image-validation";
 import { charityEventSchema, charitySchema } from "@/lib/validation/charity";
 import { toFieldErrors } from "@/lib/validation/auth";
 
@@ -76,7 +76,7 @@ async function storePublicImage(
 ): Promise<{ url: string } | { error: string } | null> {
   if (!(file instanceof File) || file.size === 0) return null;
 
-  const validated = await validateImageUpload(file);
+  const validated = await validateImageUpload(file, MAX_CHARITY_IMAGE_BYTES);
   if (!validated.ok) return { error: validated.error };
 
   const [row] = await db
@@ -232,13 +232,21 @@ export async function deleteCharityAction(
     .from(users)
     .where(eq(users.charityId, id));
 
-  if (paymentCount > 0 || supporterCount > 0) {
+  // Donations reference charities with ON DELETE RESTRICT, so a charity that has
+  // received even one gift cannot be hard-deleted — without this check the
+  // delete below would fail on the foreign key instead of deactivating.
+  const [{ donationCount }] = await db
+    .select({ donationCount: sql<number>`count(*)::int` })
+    .from(donations)
+    .where(eq(donations.charityId, id));
+
+  if (paymentCount > 0 || supporterCount > 0 || donationCount > 0) {
     await db
       .update(charities)
       .set({ isActive: false, isFeatured: false, updatedAt: new Date() })
       .where(eq(charities.id, id));
 
-    await audit(admin, "charity.deactivated", id, { paymentCount, supporterCount });
+    await audit(admin, "charity.deactivated", id, { paymentCount, supporterCount, donationCount });
     refresh();
 
     return {
