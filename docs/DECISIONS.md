@@ -386,3 +386,46 @@ files, and header-injection filenames. Route authorisation is checked live:
 anonymous, a different signed-in user, and a malformed id all receive 404 (not
 403 — confirming an id exists would leak that someone made a claim), while the
 owner and an administrator receive 200.
+
+---
+
+## D15 · The build must not need a database
+
+**Found when the build ran with Postgres down.** `next build` tried to
+prerender `/draws` and failed on a database query.
+
+Pages that read the database *before* touching a request API (cookies,
+headers, search params) are candidates for build-time prerendering. With the
+database up this failed silently in the worse direction — it would have baked
+that moment's prize pool into static HTML. With it down, the build broke.
+
+**Decision.** Public pages that show live figures (`/`, `/draws`, `/pricing`)
+call Next 16's `await connection()` before any query, which marks them as
+request-time only. It is placed in the pages rather than the shared data layer,
+because the CLI scripts (`demo:draw`, `verify:*`) call the same service
+functions outside any request, where `connection()` cannot be used.
+
+**Verified** by building with Docker stopped: the build succeeds and every data
+route is reported as dynamic. This is what makes the Vercel build independent
+of whether Neon is reachable from the build machine.
+
+---
+
+## D16 · Donations are a separate ledger, by construction
+
+**PRD §08.1 — "Independent donation option, not tied to gameplay."**
+
+**Decision.** One-off gifts use a Stripe Checkout session in `payment` mode,
+tagged `kind=donation`, and are recorded only in the `donations` table. They
+never write to `payments`, so they can never enter the prize-pool calculation.
+Visitors can give without an account; a signed-in donor's gift is linked to
+their profile.
+
+**Why a separate table rather than a flag on payments.** The prize pool is a
+`SUM` over the payments ledger. A flag would make correctness depend on every
+future query remembering to exclude donations; a separate table makes the wrong
+answer impossible to write.
+
+**Verified.** `npm run verify:donations` creates a real Stripe session, settles
+it twice (the second is a no-op), and asserts the payments ledger row count and
+the current prize pool are unchanged before and after.

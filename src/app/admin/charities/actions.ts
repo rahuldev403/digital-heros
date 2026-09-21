@@ -118,7 +118,7 @@ export async function createCharityAction(
   const cover = await storePublicImage(formData.get("cover"), admin.id);
   if (cover && "error" in cover) return { status: "error", message: cover.error };
 
-  let slug = parsed.data.slug;
+  const slug = parsed.data.slug;
 
   try {
     await db.insert(charities).values({

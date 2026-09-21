@@ -8,7 +8,7 @@ import { ArrowLeft, CalendarDays, Globe, MapPin, Users } from "lucide-react";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
-import { charities, charityEvents, payments, users } from "@/db/schema";
+import { charities, charityEvents, donations, payments, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/dal";
 import { formatMoney } from "@/lib/money";
 
@@ -49,7 +49,7 @@ export default async function CharityProfilePage({
 
   if (!charity) notFound();
 
-  const [user, events, [raised], [supporters]] = await Promise.all([
+  const [user, events, [raised], [supporters], [donated]] = await Promise.all([
     getCurrentUser(),
 
     // Only what is still ahead; a past golf day is not a reason to give.
@@ -78,6 +78,13 @@ export default async function CharityProfilePage({
       .select({ total: sql<number>`count(*)::int` })
       .from(users)
       .where(eq(users.charityId, charity.id)),
+
+    // Direct one-off gifts (PRD §08.1), counted alongside subscription
+    // contributions — both are money this charity actually received.
+    db
+      .select({ total: sql<number>`coalesce(sum(${donations.amountMinor}), 0)::int` })
+      .from(donations)
+      .where(and(eq(donations.charityId, charity.id), eq(donations.status, "succeeded"))),
   ]);
 
   const isMyCharity = user?.charityId === charity.id;
@@ -146,7 +153,7 @@ export default async function CharityProfilePage({
                 Raised through Digital Heroes
               </p>
               <p className="mt-1.5 font-mono text-3xl font-bold tabular">
-                {formatMoney(raised.total, raised.currency)}
+                {formatMoney(raised.total + donated.total, raised.currency)}
               </p>
             </div>
 
@@ -223,15 +230,28 @@ export default async function CharityProfilePage({
               </p>
             </div>
 
-            {!isMyCharity && (
-              <Button
-                as={Link}
-                href={user ? "/dashboard/charity" : "/signup"}
-                size="lg"
-              >
-                {user ? "Switch to this cause" : "Join and choose"}
-              </Button>
-            )}
+            <div className="flex flex-wrap gap-3">
+              {/* A one-off gift needs no account and no subscription (§08.1). */}
+              {charity.isActive && (
+                <Button
+                  as={Link}
+                  href={`/charities/${charity.slug}/donate`}
+                  size="lg"
+                  variant="dark"
+                >
+                  Donate once
+                </Button>
+              )}
+              {!isMyCharity && (
+                <Button
+                  as={Link}
+                  href={user ? "/dashboard/charity" : "/signup"}
+                  size="lg"
+                >
+                  {user ? "Switch to this cause" : "Join and choose"}
+                </Button>
+              )}
+            </div>
           </section>
         </div>
       </main>

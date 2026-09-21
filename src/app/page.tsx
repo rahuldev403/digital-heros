@@ -1,6 +1,7 @@
+import { connection } from "next/server";
 import Link from "next/link";
 
-import { ArrowRight, HeartHandshake, PenLine, Trophy } from "lucide-react";
+import { ArrowRight, CalendarDays, HeartHandshake, MapPin, PenLine, Trophy, Users } from "lucide-react";
 
 import { LottiePlayer } from "@/components/lottie-player";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
@@ -12,7 +13,7 @@ import { PRIZE_TIERS, SCORES_RETAINED, TIER_SHARE_BPS } from "@/lib/constants";
 import { getCurrentUser } from "@/lib/dal";
 import { formatMoney } from "@/lib/money";
 import { formatPeriod, currentPeriodKey } from "@/lib/period";
-import { getPlatformStats } from "@/lib/stats";
+import { getPlatformStats, getSpotlightCharity, type SpotlightCharity } from "@/lib/stats";
 
 /**
  * Homepage — PRD §12 HOMEPAGE.
@@ -24,7 +25,16 @@ import { getPlatformStats } from "@/lib/stats";
  * the page change.
  */
 export default async function HomePage() {
-  const [user, stats] = await Promise.all([getCurrentUser(), getPlatformStats()]);
+  // Live figures: render per request, never at build time. Without this the
+  // build would query the database, fail when it is unreachable, or bake
+  // stale numbers into static HTML when it is.
+  await connection();
+
+  const [user, stats, spotlight] = await Promise.all([
+    getCurrentUser(),
+    getPlatformStats(),
+    getSpotlightCharity(),
+  ]);
 
   const period = currentPeriodKey();
 
@@ -47,6 +57,7 @@ export default async function HomePage() {
 
         <HowItWorks />
         <PrizeTiers stats={stats} />
+        {spotlight && <Spotlight charity={spotlight} currency={stats.currency} />}
         <CharityImpact stats={stats} />
         <FinalCta signedIn={Boolean(user)} />
       </main>
@@ -389,6 +400,110 @@ function FinalCta({ signedIn }: { signedIn: boolean }) {
             {signedIn ? "Go to dashboard" : "Create your account"}
             <ArrowRight className="size-4" aria-hidden />
           </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Charity spotlight — PRD §08.2 HOMEPAGE.
+ *
+ * One named cause, given real room: what it does, what members have already
+ * raised for it, and the next thing happening. Leading with a specific charity
+ * rather than "charities" in general is what the brief means by
+ * "emotion-driven, leading with charitable impact" (§12).
+ */
+function Spotlight({
+  charity,
+  currency,
+}: {
+  charity: SpotlightCharity;
+  currency: string;
+}) {
+  return (
+    <section className="border-b-2 border-ink bg-forest px-5 py-16 text-cream lg:py-24">
+      <div className="mx-auto max-w-6xl space-y-10">
+        <Reveal>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-full border-2 border-ink bg-mustard px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-ink shadow-retro-sm">
+              Charity spotlight
+            </span>
+            <span className="text-xs font-bold uppercase tracking-widest text-cream/70">
+              {charity.category}
+              {charity.location && ` · ${charity.location}`}
+            </span>
+          </div>
+        </Reveal>
+
+        <div className="grid items-start gap-10 lg:grid-cols-[1.3fr_1fr]">
+          <Reveal delay={0.05}>
+            <div className="space-y-5">
+              <h2 className="text-4xl sm:text-5xl">{charity.name}</h2>
+              {charity.tagline && (
+                <p className="text-xl font-semibold text-mustard">{charity.tagline}</p>
+              )}
+              <p className="max-w-xl text-lg leading-relaxed text-cream/85">
+                {charity.summary}
+              </p>
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                <Button as={Link} href={`/charities/${charity.slug}`} size="lg" variant="secondary">
+                  Read their story
+                  <ArrowRight className="size-4" aria-hidden />
+                </Button>
+                <Button as={Link} href="/signup" size="lg">
+                  Support this cause
+                </Button>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.12}>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-2xl border-2 border-ink bg-paper p-5 text-ink shadow-retro">
+                  <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
+                    Raised by members
+                  </p>
+                  <p className="mt-1.5 font-mono text-2xl font-bold tabular text-forest">
+                    {formatMoney(charity.raisedMinor, currency)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border-2 border-ink bg-mustard p-5 text-ink shadow-retro">
+                  <p className="inline-flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest opacity-75">
+                    <Users className="size-3.5" aria-hidden />
+                    Supporters
+                  </p>
+                  <p className="mt-1.5 font-mono text-2xl font-bold tabular">
+                    {charity.supporters}
+                  </p>
+                </div>
+              </div>
+
+              {charity.nextEvent && (
+                <div className="rounded-2xl border-2 border-ink bg-paper p-5 text-ink shadow-retro">
+                  <p className="inline-flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
+                    <CalendarDays className="size-3.5" aria-hidden />
+                    Next event
+                  </p>
+                  <p className="mt-1.5 text-lg font-semibold">{charity.nextEvent.title}</p>
+                  <p className="mt-0.5 text-sm text-ink-soft">
+                    {new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(
+                      charity.nextEvent.startsAt,
+                    )}
+                  </p>
+                  {charity.nextEvent.location && (
+                    <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-ink-faint">
+                      <MapPin className="size-3.5" aria-hidden />
+                      {charity.nextEvent.location}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </Reveal>
         </div>
       </div>
     </section>

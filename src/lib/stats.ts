@@ -1,9 +1,9 @@
 import "server-only";
 
-import { count, eq, sql, sum } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, sql, sum } from "drizzle-orm";
 
 import { db } from "@/db";
-import { charities, payments } from "@/db/schema";
+import { charities, charityEvents, payments, users } from "@/db/schema";
 
 import { currentPeriodKey } from "./period";
 import { calculatePool } from "./services/draws";
@@ -67,4 +67,70 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     charityCount: charityCountRow?.total ?? 0,
     currency: charityRow?.currency ?? process.env.NEXT_PUBLIC_CURRENCY ?? "EUR",
   };
+}
+
+export interface SpotlightCharity {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string | null;
+  summary: string;
+  category: string;
+  location: string | null;
+  coverImageUrl: string | null;
+  raisedMinor: number;
+  supporters: number;
+  nextEvent: { title: string; startsAt: Date; location: string | null } | null;
+}
+
+/**
+ * The homepage spotlight — PRD §08.2 "Featured charity section on the homepage".
+ *
+ * The admin chooses it (a single slot; see `setSpotlightAction`). If nobody has
+ * been featured — or the featured charity was deactivated — it falls back to
+ * the active charity that has raised the most, so the homepage never shows an
+ * empty spotlight or promotes a cause that can no longer accept supporters.
+ */
+export async function getSpotlightCharity(): Promise<SpotlightCharity | null> {
+  const raised = sql<number>`(
+    select coalesce(sum(p.charity_amount_minor), 0)::int
+    from ${payments} p
+    where p.charity_id = ${charities.id} and p.status = 'succeeded'
+  )`;
+
+  const [row] = await db
+    .select({
+      id: charities.id,
+      slug: charities.slug,
+      name: charities.name,
+      tagline: charities.tagline,
+      summary: charities.summary,
+      category: charities.category,
+      location: charities.location,
+      coverImageUrl: charities.coverImageUrl,
+      raisedMinor: raised,
+      supporters: sql<number>`(
+        select count(*)::int from ${users} u where u.charity_id = ${charities.id}
+      )`,
+    })
+    .from(charities)
+    .where(eq(charities.isActive, true))
+    // Featured first; otherwise whoever has raised the most.
+    .orderBy(desc(charities.isFeatured), desc(raised))
+    .limit(1);
+
+  if (!row) return null;
+
+  const [event] = await db
+    .select({
+      title: charityEvents.title,
+      startsAt: charityEvents.startsAt,
+      location: charityEvents.location,
+    })
+    .from(charityEvents)
+    .where(and(eq(charityEvents.charityId, row.id), gte(charityEvents.startsAt, new Date())))
+    .orderBy(asc(charityEvents.startsAt))
+    .limit(1);
+
+  return { ...row, nextEvent: event ?? null };
 }

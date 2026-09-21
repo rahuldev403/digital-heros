@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { NumberRow } from "@/components/ui/number-ball";
@@ -20,6 +21,11 @@ export const metadata: Metadata = {
  * release.
  */
 export default async function DrawsPage() {
+  // Live figures: render per request, never at build time. Without this the
+  // build would query the database, fail when it is unreachable, or bake
+  // stale numbers into static HTML when it is.
+  await connection();
+
   const [published, livePool] = await Promise.all([
     listPublishedDraws(),
     calculatePool(currentPeriodKey()),

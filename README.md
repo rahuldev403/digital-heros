@@ -93,6 +93,7 @@ Created by `npm run db:seed`. Configurable via `SEED_*` variables in `.env.local
 | `npm run stripe:listen` | Forward Stripe webhooks to the local dev server |
 | `npm run verify:checkout` | Create real Checkout sessions and assert price, currency and metadata |
 | `npm run verify:uploads` | Assert upload validation rejects disguised and oversized files |
+| `npm run verify:donations` | Assert donations settle idempotently and never touch the prize pool |
 
 A web DB browser is also available at <http://localhost:8080> while the container runs
 (server `postgres`, user `dh`, password `dh_local_dev`, database `digital_heroes`).
@@ -152,5 +153,5 @@ changes against a live database can be read before they run.
 - [x] **Phase 6** — Winner verification, proof upload and payouts
 - [x] **Phase 7** — User dashboard
 - [x] **Phase 8** — Admin dashboard (users, draws, charities, winners, reports)
-- [ ] **Phase 9** — Public site and UI polish
+- [x] **Phase 9** — Public site, charity spotlight, donations, UI polish
 - [ ] **Phase 10** — Deployment

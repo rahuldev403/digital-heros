@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { auditLogs } from "@/db/schema";
 import { env } from "@/lib/env";
 import { recordInvoicePayment, syncSubscriptionFromStripe } from "@/lib/services/billing";
+import { settleDonationSession } from "@/lib/services/donations";
 import { getStripe } from "@/lib/stripe";
 
 import type Stripe from "stripe";
@@ -89,6 +90,13 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
+
+      // One-off donations (PRD §08.1) settle here too, so a donor who closes
+      // the tab before the thank-you page loads is still recorded.
+      if (session.mode === "payment" && session.metadata?.kind === "donation") {
+        await settleDonationSession(session);
+        break;
+      }
 
       if (session.mode !== "subscription" || !session.subscription) break;
 

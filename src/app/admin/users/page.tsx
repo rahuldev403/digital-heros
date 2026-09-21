@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { desc, eq, ilike, or, sql } from "drizzle-orm";
 import { Search } from "lucide-react";
@@ -111,7 +112,9 @@ export default async function AdminUsersPage({
             {rows.map((row) => (
               <tr key={row.id} className="align-top">
                 <Td>
-                  <p className="font-semibold">{row.fullName}</p>
+                  <Link href={`/admin/users/${row.id}`} className="font-semibold hover:text-teal">
+                    {row.fullName}
+                  </Link>
                   <p className="text-ink-soft">{row.email}</p>
                   {row.role === "admin" && (
                     <StatusPill status="admin" className="mt-1.5 bg-plum text-cream" />

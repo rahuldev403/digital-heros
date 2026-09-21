@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import Link from "next/link";
 
 import { asc, eq } from "drizzle-orm";
@@ -33,6 +34,11 @@ const INCLUDED = [
  * buttons currently route to signup for signed-out visitors.
  */
 export default async function PricingPage() {
+  // Live figures: render per request, never at build time. Without this the
+  // build would query the database, fail when it is unreachable, or bake
+  // stale numbers into static HTML when it is.
+  await connection();
+
   const [user, planRows] = await Promise.all([
     getCurrentUser(),
     db
